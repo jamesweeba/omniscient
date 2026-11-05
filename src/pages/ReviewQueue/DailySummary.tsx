@@ -47,8 +47,13 @@ export function DailySummary() {
 }
 
 function Content({ data }: { data: Summary }) {
-  const { orders, needsAttention } = data
+  const { orders, needsAttention, money } = data
   const attention = [
+    money.shortfall !== null && money.shortfall > 0 && { to: '/payouts', text: `Top up Paystack: ${cedis(money.shortfall)} short of what vendors are owed` },
+    needsAttention.stuckPayouts > 0 && {
+      to: '/payouts?view=payouts&status=processing',
+      text: `${plural(needsAttention.stuckPayouts, 'payout')} stuck on the way (${cedis(money.stuckPayouts.amount)}): check them in Paystack`,
+    },
     needsAttention.failedPayouts > 0 && { to: '/payouts?view=payouts&status=failed', text: `${plural(needsAttention.failedPayouts, 'shop')} with a failed payout` },
     needsAttention.pendingBanners > 0 && { to: '/vendors?banner=pending', text: `${plural(needsAttention.pendingBanners, 'banner')} to approve` },
     needsAttention.waitingForReview > 0 && { to: '/review-queue', text: `${plural(needsAttention.waitingForReview, 'shop')} waiting for review` },
@@ -75,10 +80,18 @@ function Content({ data }: { data: Summary }) {
         <StatCard
           label="Paid to vendors"
           value={cedis(data.paidOut.amount)}
-          note={data.paidOut.count ? `${plural(data.paidOut.count, 'MoMo payout')}` : 'No payouts'}
+          note={[
+            data.paidOut.count ? plural(data.paidOut.count, 'MoMo payout') : 'No payouts',
+            data.failedPayouts.count ? `${data.failedPayouts.count} failed (${cedis(data.failedPayouts.amount)})` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          noteTone={data.failedPayouts.count ? 'warning' : 'muted'}
         />
         <StatCard label="New shops" value={data.newShops} note={data.newShops ? 'Signed up' : 'No sign-ups'} />
       </StatGrid>
+
+      <MoneyCheck money={money} />
 
       <div className={styles.columns}>
         <div>
@@ -114,5 +127,35 @@ function Content({ data }: { data: Summary }) {
         </div>
       </div>
     </>
+  )
+}
+
+/** Right now: can MarketiX pay every vendor what they're owed from its Paystack balance? */
+function MoneyCheck({ money }: { money: Summary['money'] }) {
+  const { paystackBalance, owedToVendors, shortfall } = money
+  return (
+    <StatGrid label="Money check, right now">
+      <StatCard
+        label="Paystack balance"
+        value={paystackBalance === null ? '—' : cedis(paystackBalance)}
+        note={paystackBalance === null ? 'Couldn’t ask Paystack' : 'Available to pay vendors'}
+      />
+      <StatCard label="Owed to vendors" value={cedis(owedToVendors)} note="Every balance, card payments on hold included" />
+      <StatCard
+        label="Covered?"
+        value={shortfall === null ? '—' : shortfall > 0 ? `${cedis(shortfall)} short` : 'Yes'}
+        valueTone={shortfall ? 'warning' : undefined}
+        note={shortfall === null ? 'Unknown until Paystack answers' : shortfall > 0 ? 'Top up Paystack before vendors withdraw' : 'Paystack holds enough'}
+        noteTone={shortfall ? 'warning' : shortfall === 0 ? 'success' : 'muted'}
+        highlighted={Boolean(shortfall)}
+      />
+      <StatCard
+        label="Stuck payouts"
+        value={money.stuckPayouts.count}
+        valueTone={money.stuckPayouts.count ? 'warning' : undefined}
+        note={money.stuckPayouts.count ? `${cedis(money.stuckPayouts.amount)} on the way 10+ minutes` : 'None'}
+        noteTone={money.stuckPayouts.count ? 'warning' : 'success'}
+      />
+    </StatGrid>
   )
 }

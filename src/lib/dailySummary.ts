@@ -14,10 +14,23 @@ export interface DailySummary {
   vendorEarnings: number
   confirmedOrders: number
   paidOut: { amount: number; count: number }
+  /** Payouts that failed that day (the money went back to the vendors' balances). */
+  failedPayouts: { amount: number; count: number }
   newShops: number
   topShops: { id: string; name: string; orders: number; sales: number }[]
   /** Right now, whatever day is shown. */
-  needsAttention: { failedPayouts: number; pendingBanners: number; waitingForReview: number }
+  needsAttention: { failedPayouts: number; pendingBanners: number; waitingForReview: number; stuckPayouts: number }
+  /** Right now: whether MarketiX's Paystack balance covers what vendors are owed. */
+  money: {
+    /** Still on their way 10+ minutes after they were sent, even after asking Paystack. */
+    stuckPayouts: { count: number; amount: number }
+    /** Every vendor's positive balance, held card earnings included. */
+    owedToVendors: number
+    /** Null when Paystack couldn't be asked. */
+    paystackBalance: number | null
+    /** How much more Paystack needs to cover every balance (0: covered; null: unknown). */
+    shortfall: number | null
+  }
 }
 
 export const fetchDailySummary = (date?: string) => api.get<DailySummary>(`/admin/daily-summary${queryString({ date })}`)

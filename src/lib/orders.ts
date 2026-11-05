@@ -66,6 +66,9 @@ export interface Order {
   riderPhone: string | null
   /** When the buyer tapped "I got my order" on WhatsApp; null if they haven't. */
   deliveryConfirmedAt?: string | null
+  /** The buyer's 1-5 rating from WhatsApp, after confirming delivery. */
+  buyerRating?: number | null
+  ratedAt?: string | null
   /** When the Paystack MoMo prompt went out. Until Paystack confirms, only Paystack can mark the order paid. */
   paymentRequestedAt?: string | null
   /** When Paystack confirmed the buyer paid MarketiX (MoMo or card orders). */

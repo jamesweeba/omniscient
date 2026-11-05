@@ -5,7 +5,17 @@ import { useAsync } from '@/hooks/useAsync'
 import { isConflict } from '@/lib/api'
 import { onDataChanged } from '@/lib/dataEvents'
 import { formatDateTime } from '@/lib/format'
-import { cedis, fetchShopMoney, fetchShopStatement, LEDGER_ENTRY, payVendorNow, PAYOUT_STATUS, setPayoutsPaused, type ShopMoney } from '@/lib/payouts'
+import {
+  cedis,
+  fetchShopMoney,
+  fetchShopStatement,
+  formatReleaseTime,
+  LEDGER_ENTRY,
+  payVendorNow,
+  PAYOUT_STATUS,
+  setPayoutsPaused,
+  type ShopMoney,
+} from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import type { VendorDetail } from '@/lib/vendors'
 import styles from './VendorReview.module.css'
@@ -42,7 +52,7 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
-  const { balance, totals, awaitingConfirmation, lastPayout, payouts } = money
+  const { balance, onHold, totals, awaitingConfirmation, lastPayout, payouts } = money
 
   async function act(kind: 'pay' | 'pause', action: () => Promise<unknown>, done: string) {
     setBusy(kind)
@@ -67,6 +77,15 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
           <dt>{balance < 0 ? 'Owes MarketiX' : 'Owed to vendor'}</dt>
           <dd className={balance < 0 ? styles.moneyOwed : undefined}>{cedis(Math.abs(balance))}</dd>
         </div>
+        {onHold.amount > 0 && (
+          <div>
+            <dt>Card payments on hold</dt>
+            <dd>
+              {cedis(onHold.amount)}
+              {onHold.nextReleaseAt && <span className={styles.mutedText}> · next ready {formatReleaseTime(onHold.nextReleaseAt)}</span>}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Waiting for buyers to confirm</dt>
           <dd>

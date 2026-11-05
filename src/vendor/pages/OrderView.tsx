@@ -247,6 +247,14 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
             <Fact label="Rider">{[order.riderName, order.riderPhone && formatPhone(order.riderPhone, 'local')].filter(Boolean).join(' · ')}</Fact>
           )}
           {order.deliveryConfirmedAt && <Fact label="Received">Buyer confirmed on WhatsApp, {formatDateTime(order.deliveryConfirmedAt)}</Fact>}
+          {order.buyerRating && (
+            <Fact label="Buyer rating">
+              <span aria-label={`${order.buyerRating} out of 5 stars`}>
+                {'★'.repeat(order.buyerRating)}
+                {'☆'.repeat(5 - order.buyerRating)}
+              </span>
+            </Fact>
+          )}
           <Fact label="Payment">
             {order.paymentMethod ? PAYMENT_METHOD[order.paymentMethod] : '—'}
             {order.paymentMethod === 'COD' && ` · collect ${formatPrice(order.totalAmount)}`}

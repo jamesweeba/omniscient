@@ -123,6 +123,14 @@ function DeliveryFacts({ order, map }: { order: Order; map: string | null }) {
         <Fact label="Rider">{[order.riderName, order.riderPhone && formatPhone(order.riderPhone)].filter(Boolean).join(' · ')}</Fact>
       )}
       {order.deliveryConfirmedAt && <Fact label="Received">Buyer confirmed on WhatsApp, {formatDateTime(order.deliveryConfirmedAt)}</Fact>}
+      {order.buyerRating && (
+        <Fact label="Buyer rating">
+          <span aria-label={`${order.buyerRating} out of 5 stars`}>
+            {'★'.repeat(order.buyerRating)}
+            {'☆'.repeat(5 - order.buyerRating)}
+          </span>
+        </Fact>
+      )}
     </dl>
   )
 }

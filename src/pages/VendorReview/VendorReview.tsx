@@ -10,6 +10,7 @@ import { DecisionPanel } from './DecisionPanel'
 import type { FlashTone, OnChanged } from './refreshOnConflict'
 import { DocumentsCard, ReviewHistoryCard, ShopDetailsCard } from './DetailCards'
 import { MoneyCard } from './MoneyCard'
+import { SalesCard } from './SalesCard'
 import { NotesCard } from './NotesCard'
 import { ProductsCard } from './ProductsCard'
 import { ActivePanel, NotSubmittedPanel, SuspendedPanel, WaitingOnVendorPanel } from './StatusPanels'
@@ -117,6 +118,7 @@ function VendorReviewContent({ initialVendor }: { initialVendor: VendorDetail })
           <BannerCard vendor={vendor} onChanged={handleChanged} />
           <ProductsCard vendor={vendor} />
           {(vendor.status === 'ACTIVE' || vendor.status === 'SUSPENDED') && <MoneyCard vendor={vendor} />}
+          {(vendor.status === 'ACTIVE' || vendor.status === 'SUSPENDED') && <SalesCard vendor={vendor} />}
           <NotesCard vendor={vendor} />
           <ReviewHistoryCard vendor={vendor} />
         </div>

@@ -37,6 +37,8 @@ export interface LedgerEntry {
   orderId: string | null
   orderNumber: string | null
   details: { items: number; commission: number; deliveryFee: number } | null
+  /** Card earnings are held until then before they can be withdrawn. Null: right away. */
+  availableAt?: string | null
   createdAt: string
   payout: Pick<Payout, 'id' | 'status' | 'reference' | 'failureReason' | 'paidAt'> | null
 }
@@ -44,6 +46,10 @@ export interface LedgerEntry {
 export interface ShopMoney {
   /** Owed to the vendor now; negative when they owe commission on cash orders. */
   balance: number
+  /** The part of the balance that can be withdrawn now (held card earnings can't). */
+  available: number
+  /** Card earnings held for `days` days before they can be withdrawn; `nextReleaseAt` is the soonest (ISO). */
+  onHold: { amount: number; nextReleaseAt: string | null; days: number }
   /** Sent to Paystack, not landed yet. */
   inFlight: number
   totals: { earned: number; commissionOnPaidOrders: number; commissionOnCashOrders: number; paidOut: number }
@@ -92,16 +98,38 @@ export type WithdrawState = { canWithdraw: true } | { canWithdraw: false; reason
  * The server checks all of this again and answers 409 with its own reason.
  */
 export function withdrawState(money: ShopMoney): WithdrawState {
-  const { payouts, balance, inFlight, minPayout, momo } = money
+  const { payouts, available, onHold, inFlight, minPayout, momo } = money
   const no = (reason: string): WithdrawState => ({ canWithdraw: false, reason })
   if (payouts.paused) return no('Withdrawals for your shop are on hold. MarketiX will contact you.')
   if (!payouts.enabled) return no('Withdrawals to MoMo start soon. Your balance is safe and you can withdraw all of it then.')
   if (!momo.number) return no('Add your MoMo number in Shop details before you withdraw.')
   if (inFlight > 0) return no('Wait for the money on its way to land before you withdraw again.')
   if (payouts.nextWithdrawalAt) return no(`You can withdraw once a day. Next withdrawal: ${formatWithdrawalDay(payouts.nextWithdrawalAt)}.`)
-  if (balance < minPayout) return no(`You can withdraw once your balance reaches ${cedis(minPayout)}.`)
+  if (available < minPayout) {
+    return no(
+      onHold.amount > 0 && onHold.nextReleaseAt
+        ? `Card payments can be withdrawn ${onHold.days} days after the buyer confirms. Your next one is ready on ${formatReleaseTime(onHold.nextReleaseAt)}.`
+        : `You can withdraw once your balance reaches ${cedis(minPayout)}.`,
+    )
+  }
   return { canWithdraw: true }
 }
+
+export interface SalesSummary {
+  /** Best sellers, buyers and low ratings look back this many days. */
+  windowDays: number
+  /** The last 7 days, and the 7 before. Paid (and confirmed cash) orders, not cancelled ones. */
+  thisWeek: { sales: number; orders: number }
+  lastWeek: { sales: number; orders: number }
+  /** Top 5 over the window, by sales. */
+  bestSellers: { productId: string | null; name: string; quantity: number; sales: number }[]
+  /** Buyers who ordered in the window; `repeat` of them have ordered more than once. */
+  buyers: { total: number; repeat: number }
+  /** Buyer ratings (1-5) of delivered orders, all time; the low ones from the window. */
+  rating: { average: number | null; count: number; recentLow: { orderId: string; orderNumber: string; rating: number; ratedAt: string }[] }
+}
+
+export const fetchMySales = () => api.get<SalesSummary>('/payouts/sales')
 
 // ── Admin ───────────────────────────────────────────────────────────────────
 
@@ -142,6 +170,8 @@ export const fetchShopMoney = (vendorId: string) => api.get<ShopMoney>(`/admin/t
 export const fetchShopStatement = (vendorId: string, page: number, pageSize: number) =>
   api.get<ApiPage<LedgerEntry>>(`/admin/tenants/${vendorId}/payouts/statement${queryString({ page, limit: pageSize })}`)
 
+export const fetchShopSales = (vendorId: string) => api.get<SalesSummary>(`/admin/tenants/${vendorId}/sales-summary`)
+
 export const payVendorNow = (vendorId: string) => api.post<Payout>(`/admin/tenants/${vendorId}/payouts/pay-now`)
 
 /** Stop or restart the shop's withdrawals. */
@@ -161,6 +191,21 @@ export function formatWithdrawalDay(iso: string, now = new Date()): string {
   const tomorrow = accraDay.format(new Date(now.getTime() + 24 * 60 * 60 * 1000))
   return accraDay.format(new Date(iso)) === tomorrow ? 'tomorrow' : dayFormat.format(new Date(iso))
 }
+
+const releaseFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Accra', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+/** "Sun 8 Nov, 14:30" (Accra time). */
+export const formatReleaseTime = (iso: string) => releaseFormat.format(new Date(iso))
+
+/** "+12%" or "−5%" from last week to this week; null when there's nothing to compare with. */
+export function weekChange(thisWeek: number, lastWeek: number): string | null {
+  if (lastWeek <= 0) return null
+  const pct = Math.round(((thisWeek - lastWeek) / lastWeek) * 100)
+  return pct === 0 ? 'Same as the week before' : `${pct > 0 ? '+' : '−'}${Math.abs(pct)}% on the week before`
+}
+
+/** "4.3 ★" style average, or null with no ratings. */
+export const formatRating = (average: number | null) => (average === null ? null : `${average.toFixed(1)} ★`)
 
 /** Pesewas from what the vendor typed ("150", "150.5", "1,200.00"); null if it isn't an amount. */
 export function parseCedis(text: string): number | null {

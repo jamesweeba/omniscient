@@ -9,13 +9,18 @@ import { formatDateTime } from '@/lib/format'
 import {
   cedis,
   fetchMyMoney,
+  fetchMySales,
   fetchMyStatement,
+  formatRating,
+  formatReleaseTime,
   LEDGER_ENTRY,
   parseCedis,
   PAYOUT_STATUS,
   requestWithdrawal,
+  weekChange,
   withdrawState,
   type LedgerEntry,
+  type SalesSummary,
   type ShopMoney,
 } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
@@ -42,7 +47,7 @@ export function Money() {
 }
 
 function MoneyContent({ summary }: { summary: ShopMoney }) {
-  const { balance, inFlight, totals, awaitingConfirmation, lastPayout } = summary
+  const { balance, available, onHold, inFlight, totals, awaitingConfirmation, lastPayout } = summary
   const owes = balance < 0
   const withdraw = withdrawState(summary)
   const [withdrawing, setWithdrawing] = useState(false)
@@ -58,6 +63,13 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
             ? `This is our ${summary.commissionPercent}% on your cash orders. It comes off your balance as buyers confirm new orders.`
             : `Each order is added here once the buyer confirms they got it. Withdraw it to your MoMo whenever you like, once a day.`}
         </p>
+        {!owes && onHold.amount > 0 && (
+          <p className={styles.alertInfo}>
+            {cedis(Math.max(available, 0))} can be withdrawn now. {cedis(onHold.amount)} from card payments is on hold for {onHold.days}{' '}
+            days after the buyer confirms
+            {onHold.nextReleaseAt ? `; the next one is ready on ${formatReleaseTime(onHold.nextReleaseAt)}` : ''}.
+          </p>
+        )}
         {sent && (
           <p className={styles.alertSuccess} role="status">
             {sent}
@@ -96,6 +108,8 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
       )}
 
       <WithdrawRules summary={summary} />
+
+      <Sales />
 
       {awaitingConfirmation.count > 0 && (
         <section className={styles.card} aria-labelledby="waiting">
@@ -142,7 +156,8 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
 
 /** Ask for part or all of the balance to be sent to the vendor's MoMo. */
 function WithdrawDialog({ summary, onClose, onSent }: { summary: ShopMoney; onClose: () => void; onSent: (amount: number) => void }) {
-  const { balance, minPayout, momo } = summary
+  // Only what's available now: held card earnings can't be withdrawn yet.
+  const { available: balance, minPayout, momo } = summary
   const [text, setText] = useState((balance / 100).toFixed(2))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -219,7 +234,7 @@ function WithdrawDialog({ summary, onClose, onSent }: { summary: ShopMoney; onCl
 
 /** How withdrawals work. */
 function WithdrawRules({ summary }: { summary: ShopMoney }) {
-  const { payouts, momo, minPayout } = summary
+  const { payouts, momo, minPayout, onHold } = summary
   return (
     <section className={`${styles.card} ${money.schedule}`} aria-labelledby="withdraw-rules">
       <span className={money.scheduleIcon} aria-hidden="true">
@@ -236,15 +251,92 @@ function WithdrawRules({ summary }: { summary: ShopMoney }) {
           Withdraw any amount from {cedis(minPayout)} up to your balance to your MoMo
           {momo.number ? ` (${formatPhone(momo.number, 'local')})` : ''}, once a day. A new day starts at midnight. If a withdrawal
           doesn’t go through, the money comes back to your balance and you can try again the same day. Nothing is sent until you
-          withdraw.
+          withdraw. Money from card payments can be withdrawn {onHold.days} days after the buyer confirms, in case the card owner
+          disputes the payment. MoMo payments are ready straight away. We’ll message you on WhatsApp when a withdrawal lands.
         </p>
       </div>
     </section>
   )
 }
 
+/** How the shop is selling: this week against last, best sellers, repeat buyers and ratings. */
+function Sales() {
+  const result = useAsync(fetchMySales)
+  return (
+    <section className={styles.card} aria-labelledby="sales">
+      <h2 id="sales" className={styles.cardTitle}>
+        Your sales
+      </h2>
+      {result.status === 'loading' && <p className={styles.muted}>Loading…</p>}
+      {result.status === 'error' && <p className={styles.alertError}>{result.error}</p>}
+      {result.status === 'success' && <SalesBody sales={result.data} />}
+    </section>
+  )
+}
+
+function SalesBody({ sales }: { sales: SalesSummary }) {
+  const { thisWeek, lastWeek, bestSellers, buyers, rating, windowDays } = sales
+  const change = weekChange(thisWeek.sales, lastWeek.sales)
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+  return (
+    <>
+      <dl className={money.totals}>
+        <dt>Last 7 days</dt>
+        <dd>
+          {cedis(thisWeek.sales)} · {plural(thisWeek.orders, 'order')}
+        </dd>
+        <dt>The 7 days before</dt>
+        <dd>
+          {cedis(lastWeek.sales)} · {plural(lastWeek.orders, 'order')}
+        </dd>
+        <dt>Buyers in the last {windowDays} days</dt>
+        <dd>{buyers.total === 0 ? 'None yet' : `${buyers.total} · ${buyers.repeat} came back`}</dd>
+        <dt>Buyer rating</dt>
+        <dd>{rating.count === 0 ? 'No ratings yet' : `${formatRating(rating.average)} from ${plural(rating.count, 'rating')}`}</dd>
+      </dl>
+      {change && <p className={styles.fieldHint}>{change}.</p>}
+
+      <h3 className={money.subheading}>Best sellers, last {windowDays} days</h3>
+      {bestSellers.length === 0 ? (
+        <p className={styles.muted}>No sales in the last {windowDays} days.</p>
+      ) : (
+        <ol className={money.waitingList}>
+          {bestSellers.map((p) => (
+            <li key={p.name}>
+              <span>
+                {p.name} <span className={money.entryMeta}>× {p.quantity}</span>
+              </span>
+              <span>{cedis(p.sales)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {rating.recentLow.length > 0 && (
+        <>
+          <h3 className={money.subheading}>Low ratings, last {windowDays} days</h3>
+          <ul className={money.waitingList}>
+            {rating.recentLow.map((r) => (
+              <li key={r.orderId}>
+                <Link to={`/vendor/orders/${r.orderId}`}>{r.orderNumber}</Link>
+                <span>
+                  {'★'.repeat(r.rating)}
+                  {'☆'.repeat(5 - r.rating)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className={styles.fieldHint}>Buyers can rate each order on WhatsApp after they tap “I got my order”.</p>
+    </>
+  )
+}
+
 function Statement() {
   const [page, setPage] = useState(1)
+  const [now] = useState(() => Date.now()) // for "on hold until"; fixed while the page is open
   const load = useCallback(() => fetchMyStatement(page, PAGE_SIZE), [page])
   const result = useAsync(load)
   const data = result.status === 'success' ? result.data : null
@@ -261,7 +353,7 @@ function Statement() {
         <>
           <ul className={money.entries} aria-busy={result.isFetching}>
             {data.data.map((entry) => (
-              <EntryRow key={entry.id} entry={entry} />
+              <EntryRow key={entry.id} entry={entry} now={now} />
             ))}
           </ul>
           <Pagination page={page} pageSize={PAGE_SIZE} total={data.meta.total} onPageChange={setPage} />
@@ -271,7 +363,7 @@ function Statement() {
   )
 }
 
-function EntryRow({ entry }: { entry: LedgerEntry }) {
+function EntryRow({ entry, now }: { entry: LedgerEntry; now: number }) {
   const d = entry.details
   const detail =
     entry.type === 'ORDER_EARNING' && d
@@ -279,6 +371,7 @@ function EntryRow({ entry }: { entry: LedgerEntry }) {
       : entry.type === 'CASH_COMMISSION' && d
         ? `${cedis(d.commission)} on ${cedis(d.items)} of items paid in cash`
         : null
+  const heldUntil = entry.availableAt && new Date(entry.availableAt).getTime() > now ? entry.availableAt : null
 
   return (
     <li className={money.entry}>
@@ -297,6 +390,7 @@ function EntryRow({ entry }: { entry: LedgerEntry }) {
           )}
         </span>
         {detail && <span className={money.entryMeta}>{detail}</span>}
+        {heldUntil && <span className={money.entryMeta}>Card payment: can be withdrawn on {formatReleaseTime(heldUntil)}</span>}
       </div>
       <span className={entry.amount < 0 ? money.amountOut : money.amountIn}>
         {entry.amount > 0 ? '+' : ''}
