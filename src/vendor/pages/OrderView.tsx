@@ -1,9 +1,13 @@
-import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useCallback, useState, type FormEvent } from 'react'
+import { useNavigate, useParams } from 'react-router'
+import { BackLink } from '@/components/BackLink/BackLink'
 import { Badge } from '@/components/Badge/Badge'
+import { Fact } from '@/components/Fact/Fact'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
-import { formatDateTime, formatPrice, whatsAppLink } from '@/lib/format'
-import { FULFILLMENT, isHiddenBuyer, mapLink, ORDER_STATUS, ORDER_STATUSES, PAYMENT_METHOD, riderMessage, whatsAppMessageLink } from '@/lib/orderDisplay'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { formatCedis, formatDateTime, formatStars, whatsAppLink } from '@/lib/format'
+import { deliveryPlace, FULFILLMENT, isHiddenBuyer, mapLink, ORDER_STATUS, ORDER_STATUSES, orderSubtotal, PAYMENT_METHOD, riderMessage, riderText, whatsAppMessageLink } from '@/lib/orderDisplay'
 import { deleteOrder, fetchMyOrder, updateOrderStatus, type Order, type OrderStatus, type StatusChange } from '@/lib/orders'
 import { formatPhone, parseGhanaPhone } from '@/lib/phone'
 import { isReadOnly, type TenantStatus } from '@/lib/vendorPortal'
@@ -47,16 +51,12 @@ export function OrderView() {
   const { shop } = useVendorPortal()
   const load = useCallback(() => fetchMyOrder(orderId), [orderId])
   const result = useAsync(load)
+  usePageTitle(result.status === 'success' ? `Order ${result.data.orderNumber}` : 'Order')
   if (!shop) return null
 
   return (
     <>
-      <Link className={styles.backLink} to="/vendor/orders">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-          <path d="M15 6l-6 6 6 6" />
-        </svg>
-        Orders
-      </Link>
+      <BackLink to="/vendor/orders">Orders</BackLink>
       {result.status === 'loading' && <p className={styles.centered}>Loading order…</p>}
       {result.status === 'error' && <p className={styles.alertError}>{result.error}</p>}
       {result.status === 'success' && (
@@ -86,8 +86,7 @@ const RIDER_STATUSES: OrderStatus[] = ['PAID', 'CONFIRMED', 'PROCESSING', 'OUT_F
 function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentProps) {
   const navigate = useNavigate()
   const [order, setOrder] = useState(initial)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, run } = useAction()
   const [message, setMessage] = useState<string | null>(null)
   // Where the rider form is open: under the next-step button or under the status menu.
   const [riderForm, setRiderForm] = useState<'next' | 'menu' | null>(null)
@@ -98,14 +97,12 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
   const lockedToPaystack = waitingForPaystack(order)
   const awaitingMomo = order.status === 'AWAITING_PAYMENT' || (lockedToPaystack && order.status === 'PENDING')
   const map = mapLink(order)
-  const subtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0)
+  const subtotal = orderSubtotal(order)
   const canSendRider = Boolean(order.riderPhone) && order.fulfillment !== 'PICKUP' && RIDER_STATUSES.includes(order.status)
 
   async function change(input: StatusChange) {
-    setPending(true)
-    setError(null)
     setMessage(null)
-    try {
+    await run(async () => {
       const updated = await updateOrderStatus(order.id, input)
       // Some responses leave out the items; keep the ones we have.
       setOrder((current) => ({ ...current, ...updated, items: updated.items ?? current.items }))
@@ -116,23 +113,18 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
           ? `Marked as “${ORDER_STATUS[input.status].label}”. Now send the delivery details to your rider (under Delivery).`
           : `Marked as “${ORDER_STATUS[input.status].label}”.`,
       )
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-    } finally {
-      setPending(false)
-    }
+    })
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     if (!window.confirm(`Delete order ${order.orderNumber}? This can’t be undone.`)) return
-    setPending(true)
-    try {
-      await deleteOrder(order.id)
-      navigate('/vendor/orders')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Couldn’t delete it. Please try again.')
-      setPending(false)
-    }
+    void run(
+      async () => {
+        await deleteOrder(order.id)
+        navigate('/vendor/orders')
+      },
+      { fallback: 'Couldn’t delete it. Please try again.', keepPendingOnSuccess: true },
+    )
   }
 
   return (
@@ -186,25 +178,25 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
                   {item.productName}
                   <br />
                   <span className={styles.muted}>
-                    {item.quantity} × {formatPrice(item.unitPrice)}
+                    {item.quantity} × {formatCedis(item.unitPrice)}
                   </span>
                 </td>
-                <td>{formatPrice(item.totalPrice)}</td>
+                <td>{formatCedis(item.totalPrice)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               <td>Items</td>
-              <td>{formatPrice(subtotal)}</td>
+              <td>{formatCedis(subtotal)}</td>
             </tr>
             <tr>
               <td>Delivery</td>
-              <td>{formatPrice(order.deliveryFee)}</td>
+              <td>{formatCedis(order.deliveryFee)}</td>
             </tr>
             <tr className={view.total}>
               <td>Total</td>
-              <td>{formatPrice(order.totalAmount)}</td>
+              <td>{formatCedis(order.totalAmount)}</td>
             </tr>
           </tfoot>
         </table>
@@ -240,24 +232,23 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
         </h2>
         <dl className={view.facts}>
           {order.fulfillment !== 'PICKUP' && (
-            <Fact label="Where">{order.deliveryAddress ?? ([order.deliveryArea, order.landmark].filter(Boolean).join(' — ') || '—')}</Fact>
+            <Fact label="Where">{deliveryPlace(order) || '—'}</Fact>
           )}
           {order.deliverySlot && <Fact label="When">{order.deliverySlot}</Fact>}
           {(order.riderName || order.riderPhone) && (
-            <Fact label="Rider">{[order.riderName, order.riderPhone && formatPhone(order.riderPhone, 'local')].filter(Boolean).join(' · ')}</Fact>
+            <Fact label="Rider">{riderText(order)}</Fact>
           )}
           {order.deliveryConfirmedAt && <Fact label="Received">Buyer confirmed on WhatsApp, {formatDateTime(order.deliveryConfirmedAt)}</Fact>}
           {order.buyerRating && (
             <Fact label="Buyer rating">
               <span aria-label={`${order.buyerRating} out of 5 stars`}>
-                {'★'.repeat(order.buyerRating)}
-                {'☆'.repeat(5 - order.buyerRating)}
+                {formatStars(order.buyerRating)}
               </span>
             </Fact>
           )}
           <Fact label="Payment">
             {order.paymentMethod ? PAYMENT_METHOD[order.paymentMethod] : '—'}
-            {order.paymentMethod === 'COD' && ` · collect ${formatPrice(order.totalAmount)}`}
+            {order.paymentMethod === 'COD' && ` · collect ${formatCedis(order.totalAmount)}`}
           </Fact>
         </dl>
         {map && order.locationLatitude != null && order.locationLongitude != null && (
@@ -344,7 +335,7 @@ function RiderForm({ pending, onCancel, onSubmit }: { pending: boolean; onCancel
     const parsed = parseGhanaPhone(phone)
     if (!name.trim()) return setError('Enter the rider’s name.')
     if (!parsed) return setError('Enter the rider’s phone, e.g. 0244 000 000.')
-    onSubmit({ riderName: name.trim(), riderPhone: parsed.local.replace(/\s/g, '') })
+    onSubmit({ riderName: name.trim(), riderPhone: parsed.compact })
   }
 
   return (
@@ -376,11 +367,3 @@ function osmEmbed(lat: number, lng: number): string {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`
 }
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  )
-}

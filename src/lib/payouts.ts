@@ -1,4 +1,6 @@
 /** Vendor money: the ledger MarketiX keeps per shop and MoMo payouts. Amounts are pesewas. */
+import { type StatusDisplay } from '@/components/Badge/Badge'
+import { cedis, formatLongDay, formatWeekdayDateTime, relativeDay } from './format'
 import { api, queryString, type ApiPage } from './api'
 
 export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'
@@ -104,11 +106,11 @@ export function withdrawState(money: ShopMoney): WithdrawState {
   if (!payouts.enabled) return no('Withdrawals to MoMo start soon. Your balance is safe and you can withdraw all of it then.')
   if (!momo.number) return no('Add your MoMo number in Shop details before you withdraw.')
   if (inFlight > 0) return no('Wait for the money on its way to land before you withdraw again.')
-  if (payouts.nextWithdrawalAt) return no(`You can withdraw once a day. Next withdrawal: ${formatWithdrawalDay(payouts.nextWithdrawalAt)}.`)
+  if (payouts.nextWithdrawalAt) return no(`You can withdraw once a day. Next withdrawal: ${relativeDay(payouts.nextWithdrawalAt)?.toLowerCase() ?? formatLongDay(payouts.nextWithdrawalAt)}.`)
   if (available < minPayout) {
     return no(
       onHold.amount > 0 && onHold.nextReleaseAt
-        ? `Card payments can be withdrawn ${onHold.days} days after the buyer confirms. Your next one is ready on ${formatReleaseTime(onHold.nextReleaseAt)}.`
+        ? `Card payments can be withdrawn ${onHold.days} days after the buyer confirms. Your next one is ready on ${formatWeekdayDateTime(onHold.nextReleaseAt)}.`
         : `You can withdraw once your balance reaches ${cedis(minPayout)}.`,
     )
   }
@@ -183,20 +185,6 @@ export const releaseOrderPayout = (orderId: string) => api.post<{ released: bool
 
 // ── Display ─────────────────────────────────────────────────────────────────
 
-const dayFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Accra', weekday: 'long', day: 'numeric', month: 'short' })
-const accraDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Accra' }) // yyyy-mm-dd
-
-/** "tomorrow" when `iso` is the next day in Accra, else "Monday 9 Nov". */
-export function formatWithdrawalDay(iso: string, now = new Date()): string {
-  const tomorrow = accraDay.format(new Date(now.getTime() + 24 * 60 * 60 * 1000))
-  return accraDay.format(new Date(iso)) === tomorrow ? 'tomorrow' : dayFormat.format(new Date(iso))
-}
-
-const releaseFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Accra', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-
-/** "Sun 8 Nov, 14:30" (Accra time). */
-export const formatReleaseTime = (iso: string) => releaseFormat.format(new Date(iso))
-
 /** "+12%" or "−5%" from last week to this week; null when there's nothing to compare with. */
 export function weekChange(thisWeek: number, lastWeek: number): string | null {
   if (lastWeek <= 0) return null
@@ -214,13 +202,7 @@ export function parseCedis(text: string): number | null {
   return Math.round(Number(clean) * 100)
 }
 
-/** "GH₵ 1,234.50" from pesewas; negative amounts get a minus sign. */
-export function cedis(pesewas: number): string {
-  const sign = pesewas < 0 ? '−' : ''
-  return `${sign}GH₵ ${(Math.abs(pesewas) / 100).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-export const PAYOUT_STATUS: Record<PayoutStatus, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
+export const PAYOUT_STATUS: Record<PayoutStatus, StatusDisplay> = {
   PENDING: { label: 'Sending', tone: 'info' },
   PROCESSING: { label: 'On its way', tone: 'info' },
   SUCCESS: { label: 'Paid', tone: 'success' },

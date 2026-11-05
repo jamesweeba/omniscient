@@ -1,5 +1,5 @@
 /** Orders: the admin's read-only views and the vendor's own orders. */
-import { api, queryString, type ApiPage } from './api'
+import { api, type ApiPage, type Paginated, queryString, toPaginated } from './api'
 import { TENANT_TO_VENDOR_STATUS, type TenantStatus } from './tenants'
 import type { VendorStatus } from './vendors'
 
@@ -106,21 +106,6 @@ const toShop = (s: ApiShop): OrderShop => ({
   whatsAppNumber: s.whatsappNumber ?? null,
 })
 
-export interface Paginated<T> {
-  items: T[]
-  total: number
-  /** 1-based. */
-  page: number
-  pageSize: number
-}
-
-const toPaginated = <A, T>(result: ApiPage<A>, map: (item: A) => T): Paginated<T> => ({
-  items: result.data.map(map),
-  total: result.meta.total,
-  page: result.meta.page,
-  pageSize: result.meta.limit,
-})
-
 /** Placed orders only (paid or later), so abandoned MoMo prompts don't count. */
 export interface OrderSummary {
   orders: number
@@ -222,7 +207,7 @@ export async function fetchShopOrders(shopId: string, query: ShopOrdersQuery): P
       limit: query.pageSize,
     })}`,
   )
-  return { shop: toShop(result.shop), summary: result.summary, counts: result.counts, ...toPaginated(result, (o) => o) }
+  return { shop: toShop(result.shop), summary: result.summary, counts: result.counts, ...toPaginated(result) }
 }
 
 export async function fetchAdminOrder(id: string): Promise<Order & { shop: OrderShop }> {
@@ -246,7 +231,7 @@ export const fetchMyOrders = (query: MyOrdersQuery): Promise<Paginated<Order>> =
     .get<ApiPage<Order>>(
       `/orders${queryString({ status: query.status, search: query.search, page: query.page, limit: query.pageSize })}`,
     )
-    .then((result) => toPaginated(result, (o) => o))
+    .then((result) => toPaginated(result))
 
 export const fetchMyOrder = (id: string): Promise<Order> => api.get<Order>(`/orders/${id}`)
 

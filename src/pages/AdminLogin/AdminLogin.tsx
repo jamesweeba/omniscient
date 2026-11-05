@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
+import { LogoMark } from '@/components/LogoMark/LogoMark'
+import { useAction } from '@/hooks/useAction'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import type { Credentials } from '@/lib/auth'
 import styles from './AdminLogin.module.css'
 
-const FALLBACK_ERROR = 'Something went wrong. Please try again.'
 
 interface AdminLoginProps {
   /** Resolves on success; rejects with an Error whose message is shown to the user. */
@@ -11,31 +13,22 @@ interface AdminLoginProps {
 }
 
 export function AdminLogin({ onLogin }: AdminLoginProps) {
+  usePageTitle('Log in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const { pending: submitting, error, run } = useAction()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError(null)
-    setSubmitting(true)
-
-    try {
-      await onLogin({ email, password })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : FALLBACK_ERROR)
-      setSubmitting(false)
-    }
+    // On success the app moves to the admin pages.
+    await run(() => onLogin({ email, password }), { keepPendingOnSuccess: true })
   }
 
   return (
     <div className={styles.page}>
       <aside className={styles.brand}>
         <div className={styles.logo}>
-          <span className={styles.logoMark} aria-hidden="true">
-            M
-          </span>
+          <LogoMark large />
           MarketiX
         </div>
 

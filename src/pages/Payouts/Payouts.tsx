@@ -1,25 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
 import { SearchField } from '@/components/FilterControls/FilterControls'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { StatCard, StatGrid } from '@/components/StatCard/StatCard'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
-import { onDataChanged } from '@/lib/dataEvents'
-import { formatDateTime } from '@/lib/format'
-import {
-  cedis,
-  fetchAllPayouts,
-  fetchPayoutsOverview,
-  fetchVendorBalances,
-  PAYOUT_STATUS,
-  payoutSourceLabel,
-  retryPayout,
-  type AdminPayout,
-  type PayoutStatusFilter,
-  type VendorBalance,
-} from '@/lib/payouts'
+import { cedis, formatDateTime } from '@/lib/format'
+import { fetchAllPayouts, fetchPayoutsOverview, fetchVendorBalances, PAYOUT_STATUS, payoutSourceLabel, retryPayout, type AdminPayout, type PayoutStatusFilter, type VendorBalance } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import page from '@/styles/page.module.css'
 import table from '@/styles/table.module.css'
@@ -43,15 +33,14 @@ const STATUS_FILTERS: { key: PayoutStatusFilter; label: string }[] = [
 
 /** Money MarketiX owes vendors, and every MoMo payout sent to them. */
 export function Payouts() {
+  usePageTitle('Payouts')
   const [params, updateParams] = useUrlParams()
   const [searchInput, setSearchInput, search] = useSearchParamInput(params, updateParams)
   const view: View = params.get('view') === 'payouts' ? 'payouts' : 'balances'
   const status = STATUS_FILTERS.find((f) => f.key === params.get('status'))?.key ?? 'all'
   const pageNumber = pageParam(params)
 
-  const overview = useAsync(fetchPayoutsOverview)
-  const { reload } = overview
-  useEffect(() => onDataChanged(reload), [reload])
+  const overview = useAsync(fetchPayoutsOverview, { live: true })
   const summary = overview.status === 'success' ? overview.data : null
 
   return (
@@ -253,21 +242,11 @@ function PayoutsTable({ search, status, pageNumber, onStatus, onPage }: ListProp
 }
 
 function PayoutRow({ payout }: { payout: AdminPayout }) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, run } = useAction()
   const display = PAYOUT_STATUS[payout.status]
 
-  async function retry() {
-    setPending(true)
-    setError(null)
-    try {
-      await retryPayout(payout.id) // reloads the page's data on success
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Couldn’t retry. Please try again.')
-    } finally {
-      setPending(false)
-    }
-  }
+  // Reloads the page's data on success.
+  const retry = () => run(() => retryPayout(payout.id), { fallback: 'Couldn’t retry. Please try again.' })
 
   return (
     <tr>

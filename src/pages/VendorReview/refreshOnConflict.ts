@@ -1,4 +1,4 @@
-import { isConflict } from '@/lib/api'
+import { conflictNotice, isConflict } from '@/lib/api'
 
 export type FlashTone = 'success' | 'warning'
 
@@ -14,6 +14,6 @@ export async function refreshOnConflict(action: () => Promise<void>, onChanged: 
     await action()
   } catch (err) {
     if (!isConflict(err)) throw err
-    onChanged(`${err.message} Showing the latest.`, 'warning')
+    onChanged(conflictNotice(err.message), 'warning')
   }
 }

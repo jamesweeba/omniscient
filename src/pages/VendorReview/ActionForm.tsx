@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useAction } from '@/hooks/useAction'
 import styles from './VendorReview.module.css'
 
 interface ActionFormProps {
@@ -27,8 +28,7 @@ export function ActionForm({
 }: ActionFormProps) {
   const id = useId()
   const [note, setNote] = useState('')
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, setError, run } = useAction()
 
   async function handleSubmit() {
     const trimmed = note.trim()
@@ -37,15 +37,8 @@ export function ActionForm({
       return
     }
     if (confirmMessage && !window.confirm(confirmMessage)) return
-
-    setPending(true)
-    setError(null)
-    try {
-      await onSubmit(trimmed)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setPending(false)
-    }
+    // On success the shop reloads and this form is replaced.
+    await run(() => onSubmit(trimmed), { keepPendingOnSuccess: true })
   }
 
   const buttonClass = {

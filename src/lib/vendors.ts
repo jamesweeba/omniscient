@@ -1,9 +1,9 @@
 /** Admin view of shops: the review queue, the directory, the review screen and its actions. */
-import { api, apiBlob, ApiError, queryString, type ApiPage } from './api'
+import { api, apiBlob, type ApiPage, isConflict, type Paginated, queryString, toPaginated } from './api'
 import { DOCUMENT_SLOTS } from './documentSlots'
 import { toPoolNumber, type ApiNumber, type PoolNumber } from './numbers'
 import { TENANT_TO_VENDOR_STATUS, VENDOR_TO_TENANT_STATUS, type TenantStatus } from './tenants'
-import type { DeliveryArea, DeliverySlot, DocumentType, Product, ShopBanner } from './vendorPortal'
+import type { ChecklistStep, DeliveryArea, DeliverySlot, DocumentType, Product, ShopBanner, ShopDocument } from './vendorPortal'
 
 export type VendorStatus =
   | 'READY_FOR_REVIEW'
@@ -125,11 +125,7 @@ export interface VendorListQuery {
   pageSize: number
 }
 
-export interface VendorListResponse {
-  items: VendorListItem[]
-  total: number
-  page: number
-  pageSize: number
+export interface VendorListResponse extends Paginated<VendorListItem> {
   /** Matches per tab for the search and market filters, for tab badges. */
   counts: Record<VendorTabKey, number>
 }
@@ -163,7 +159,7 @@ export async function fetchVendors(query: VendorListQuery): Promise<VendorListRe
     })}`,
   )
   return {
-    items: result.data.map((v) => ({
+    ...toPaginated(result, (v) => ({
       id: v.id,
       ref: v.ref,
       shopName: v.name,
@@ -178,9 +174,6 @@ export async function fetchVendors(query: VendorListQuery): Promise<VendorListRe
       noteCount: v.noteCount,
       bannerPending: v.bannerPending,
     })),
-    total: result.meta.total,
-    page: result.meta.page,
-    pageSize: result.meta.limit,
     counts: result.counts,
   }
 }
@@ -211,14 +204,9 @@ export const NO_CHECKS: ReviewChecks = {
 
 export type ReviewDecision = 'APPROVED' | 'MORE_INFO' | 'REJECTED' | 'SUSPENDED' | 'RELEASED' | 'REINSTATED'
 
-export interface VendorDocument {
-  id: string
-  type: DocumentType
+/** A shop's document as admins see it: with its slot's title. */
+export interface VendorDocument extends ShopDocument {
   title: string
-  fileName: string
-  mimeType: string
-  size: number
-  uploadedAt: string
 }
 
 export interface ReviewRecord {
@@ -254,7 +242,7 @@ export interface VendorDetail {
   momo: { number: string | null; registeredName: string | null }
   /** Uploaded documents only. */
   documents: VendorDocument[]
-  kyc: { key: string; label: string; done: boolean }[]
+  kyc: ChecklistStep[]
   products: { sample: Product[]; inStock: number; uncategorised: number }
   /** Newest first. */
   reviews: ReviewRecord[]
@@ -286,7 +274,7 @@ interface ApiTenantDetail {
   user: { email: string; firstName: string; lastName: string }
   number: ApiNumber | null
   documents: Omit<VendorDocument, 'title'>[]
-  kyc: { key: string; label: string; done: boolean }[]
+  kyc: ChecklistStep[]
   products: { sample: Product[]; inStock: number; uncategorised: number }
   reviews: ReviewRecord[]
   banner: ShopBanner
@@ -361,7 +349,7 @@ export async function startReview(id: string): Promise<void> {
   try {
     await api.post(`/admin/tenants/${id}/start-review`)
   } catch (err) {
-    if (!(err instanceof ApiError && err.status === 409)) throw err
+    if (!isConflict(err)) throw err
   }
 }
 

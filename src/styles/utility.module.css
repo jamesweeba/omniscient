@@ -1,0 +1,51 @@
+/* Small styles shared across the app. Pull one in with `composes: name from '…/utility.module.css'`. */
+
+/* Read by screen readers, not shown. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* A message across the top of an admin page after an action: success by default. */
+.flash {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--color-success-fg);
+  background: var(--color-success-bg);
+  border: 1px solid #b9dfc8;
+  border-radius: 10px;
+}
+
+.flashError {
+  composes: flash;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-bg);
+}
+
+.flashWarning {
+  composes: flash;
+  color: var(--color-warning-fg);
+  background: var(--color-warning-bg);
+  border-color: #f0d48a;
+}
+
+/* A message that fills the page body (loading, or a page that crashed). */
+.screen {
+  display: flex;
+  justify-content: center;
+  padding: 48px 16px;
+}
+
+/* The same, filling the whole window when no layout is drawn. */
+.fullScreen {
+  composes: screen;
+  min-height: 100vh;
+  align-items: center;
+  background: var(--color-bg);
+}

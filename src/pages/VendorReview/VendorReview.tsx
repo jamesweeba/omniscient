@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router'
+import { useLocation, useParams } from 'react-router'
+import { BackLink } from '@/components/BackLink/BackLink'
 import { StatusBadge } from '@/components/StatusBadge/StatusBadge'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { formatDate, formatWaiting, whatsAppLink } from '@/lib/format'
 import { QUEUE_STATUSES } from '@/lib/vendorStatus'
 import { fetchVendorDetail, startReview, type VendorDetail } from '@/lib/vendors'
@@ -40,6 +42,7 @@ function VendorReview({ vendorId }: { vendorId: string }) {
   const load = useCallback(() => loadForReview(vendorId), [vendorId])
   const detail = useAsync(load)
   const linkState = useLocation().state as VendorLinkState | null
+  usePageTitle(detail.status === 'success' ? detail.data.shopName : 'Vendor')
 
   // Without a linking page, shops still in review go back to the queue; others to Vendors.
   const inQueue = detail.status !== 'success' || QUEUE_STATUSES.includes(detail.data.status)
@@ -49,10 +52,9 @@ function VendorReview({ vendorId }: { vendorId: string }) {
 
   return (
     <>
-      <Link className={styles.backLink} to={back.backTo}>
-        <BackIcon />
+      <BackLink to={back.backTo} small>
         {back.backLabel}
-      </Link>
+      </BackLink>
 
       {detail.status === 'loading' && <p className={styles.message}>Loading vendor…</p>}
       {detail.status === 'error' && <p className={styles.message}>{detail.error}</p>}
@@ -151,10 +153,3 @@ function StatusPanel(props: StatusPanelProps) {
   }
 }
 
-function BackIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-      <path d="M15 6l-6 6 6 6" />
-    </svg>
-  )
-}

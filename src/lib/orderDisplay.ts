@@ -1,9 +1,9 @@
-import type { BadgeTone } from '@/components/Badge/Badge'
-import { formatPrice, whatsAppLink } from './format'
+import { type StatusDisplay } from '@/components/Badge/Badge'
+import { formatCedis, whatsAppLink } from './format'
 import type { Fulfillment, Order, OrderPeriod, OrderStatus, PaymentMethod, PeriodQuery, ShopOrderTab } from './orders'
 import { formatPhone } from './phone'
 
-export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: BadgeTone }> = {
+export const ORDER_STATUS: Record<OrderStatus, StatusDisplay> = {
   PENDING: { label: 'Pending', tone: 'neutral' },
   AWAITING_PAYMENT: { label: 'Waiting for MoMo', tone: 'warning' },
   PAID: { label: 'Paid', tone: 'info' },
@@ -78,7 +78,7 @@ export const isHiddenBuyer = (phone: string) => !/^\+?\d[\d\s]*$/.test(phone)
 export function riderMessage(order: Order, shopName: string | null): string {
   const phone = order.contactPhone ?? (isHiddenBuyer(order.buyerPhone) ? null : order.buyerPhone)
   const buyer = [order.customerName, phone && formatPhone(phone, 'local')].filter(Boolean).join(', ')
-  const where = order.deliveryAddress ?? [order.deliveryArea, order.landmark].filter(Boolean).join(', ')
+  const where = deliveryPlace(order, ', ')
   const map = mapLink(order)
   const items = order.items.map((item) => `• ${item.quantity} × ${item.productName}`)
 
@@ -101,12 +101,25 @@ export function riderMessage(order: Order, shopName: string | null): string {
 
 /** What the rider must collect. Only cash orders, or orders not paid yet, need anything. */
 function payment(order: Order): string {
-  if (order.paymentMethod === 'COD') return `💵 Collect *${formatPrice(order.totalAmount)}* in cash`
+  if (order.paymentMethod === 'COD') return `💵 Collect *${formatCedis(order.totalAmount)}* in cash`
   if (order.status === 'PENDING' || order.status === 'AWAITING_PAYMENT') {
-    return `⚠️ Not paid yet (${formatPrice(order.totalAmount)}): check with the shop before handing it over`
+    return `⚠️ Not paid yet (${formatCedis(order.totalAmount)}): check with the shop before handing it over`
   }
   return '✅ Already paid: collect nothing'
 }
 
 /** A WhatsApp link that opens a chat with `phone`, with `text` typed in and ready to send. */
 export const whatsAppMessageLink = (phone: string, text: string) => `${whatsAppLink(phone)}?text=${encodeURIComponent(text)}`
+
+/** What the items cost, before delivery. */
+export const orderSubtotal = (order: { items: { totalPrice: number }[] }) => order.items.reduce((sum, item) => sum + item.totalPrice, 0)
+
+/** Where to deliver: the address, or the area and landmark the buyer gave. Empty when there's neither. */
+export const deliveryPlace = (
+  order: { deliveryAddress: string | null; deliveryArea: string | null; landmark: string | null },
+  separator = ' — ',
+) => order.deliveryAddress ?? [order.deliveryArea, order.landmark].filter(Boolean).join(separator)
+
+/** "Kofi · 024 400 0000" */
+export const riderText = (order: { riderName: string | null; riderPhone: string | null }, style: 'international' | 'local' = 'local') =>
+  [order.riderName, order.riderPhone && formatPhone(order.riderPhone, style)].filter(Boolean).join(' · ')

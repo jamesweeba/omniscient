@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { Link } from 'react-router'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
 import { formatCedis, formatDateTime, formatShortDate, formatTimeAgo, whatsAppLink } from '@/lib/format'
 import { fetchShopOrders } from '@/lib/orders'
@@ -299,19 +300,11 @@ interface ConfirmButtonProps {
 
 /** One button that asks first, then shows the server's error if the action fails. */
 function ConfirmButton({ label, pendingLabel, variant, confirmMessage, onConfirm }: ConfirmButtonProps) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, run } = useAction()
 
-  async function handleClick() {
-    if (!window.confirm(confirmMessage)) return
-    setPending(true)
-    setError(null)
-    try {
-      await onConfirm()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setPending(false)
-    }
+  function handleClick() {
+    // On success the shop reloads and this panel is replaced.
+    if (window.confirm(confirmMessage)) void run(onConfirm, { keepPendingOnSuccess: true })
   }
 
   return (

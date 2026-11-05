@@ -1,8 +1,8 @@
-import type { BadgeTone } from '@/components/Badge/Badge'
+import { type StatusDisplay } from '@/components/Badge/Badge'
 import type { VendorStatus, VendorTabKey } from './vendors'
 
 /** Admin badges for each shop status. */
-export const VENDOR_STATUS: Record<VendorStatus, { label: string; tone: BadgeTone }> = {
+export const VENDOR_STATUS: Record<VendorStatus, StatusDisplay> = {
   PENDING_NO_PRODUCTS: { label: 'Pending', tone: 'neutral' },
   READY_FOR_REVIEW: { label: 'Waiting', tone: 'info' },
   UNDER_REVIEW: { label: 'In review', tone: 'info' },

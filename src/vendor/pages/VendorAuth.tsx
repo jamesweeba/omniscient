@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { LogoMark } from '@/components/LogoMark/LogoMark'
 import { useAuth } from '@/context/auth-context'
+import { useAction } from '@/hooks/useAction'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { canUseArea } from '@/lib/auth'
 import { OrderFlowDemo } from './OrderFlowDemo'
 import styles from './VendorAuth.module.css'
@@ -14,14 +17,14 @@ type Field = 'firstName' | 'lastName' | 'email' | 'password'
 
 /** Vendor sign-up and log-in (one screen, two tabs; each tab has its own URL). */
 export function VendorAuth({ mode }: { mode: Mode }) {
+  usePageTitle(mode === 'signup' ? 'Sign up' : 'Log in')
   const { session, login, signup } = useAuth()
   const navigate = useNavigate()
   const from = (useLocation().state as { from?: string } | null)?.from
 
   const [values, setValues] = useState<Record<Field, string>>({ firstName: '', lastName: '', email: '', password: '' })
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({})
-  const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
+  const { pending, error, setError, run } = useAction()
 
   if (session && canUseArea(session.user.role, 'vendor')) return <Navigate to={from ?? '/vendor'} replace />
 
@@ -46,20 +49,15 @@ export function VendorAuth({ mode }: { mode: Mode }) {
     event.preventDefault()
     if (!validate()) return
 
-    setPending(true)
-    setError(null)
     const email = values.email.trim()
-    try {
-      if (isSignup) {
-        await signup({ firstName: values.firstName.trim(), lastName: values.lastName.trim(), email, password: values.password })
-      } else {
-        await login({ email, password: values.password }, 'vendor')
-      }
-      // The redirect above runs once the session is set.
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setPending(false)
-    }
+    // The redirect above runs once the session is set.
+    await run(
+      () =>
+        isSignup
+          ? signup({ firstName: values.firstName.trim(), lastName: values.lastName.trim(), email, password: values.password })
+          : login({ email, password: values.password }, 'vendor'),
+      { keepPendingOnSuccess: true },
+    )
   }
 
   return (
@@ -68,9 +66,7 @@ export function VendorAuth({ mode }: { mode: Mode }) {
         <div className={styles.glow} aria-hidden="true" />
         <div className={styles.heroInner}>
           <div className={styles.brand}>
-            <span className={styles.logoMark} aria-hidden="true">
-              M
-            </span>
+            <LogoMark large glow />
             MarketiX
           </div>
 

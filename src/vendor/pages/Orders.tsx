@@ -1,11 +1,11 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
-import { onDataChanged } from '@/lib/dataEvents'
-import { formatDateTime, formatPrice } from '@/lib/format'
+import { formatDateTime, formatCedis } from '@/lib/format'
 import { isHiddenBuyer, ORDER_STATUS } from '@/lib/orderDisplay'
 import { fetchMyOrders, type Order, type OrderStatus } from '@/lib/orders'
 import { formatPhone } from '@/lib/phone'
@@ -29,6 +29,7 @@ const FILTERS: { status: OrderStatus | null; label: string }[] = [
 ]
 
 export function Orders() {
+  usePageTitle('Orders')
   const { shop } = useVendorPortal()
   const [params, update] = useUrlParams()
   const [search, setSearch, committedSearch] = useSearchParamInput(params, update)
@@ -39,9 +40,7 @@ export function Orders() {
     () => fetchMyOrders({ status: status ?? undefined, search: committedSearch || undefined, page, pageSize: PAGE_SIZE }),
     [status, committedSearch, page],
   )
-  const orders = useAsync(load)
-  const { reload } = orders
-  useEffect(() => onDataChanged(reload), [reload])
+  const orders = useAsync(load, { live: true })
   if (!shop) return null
 
   const data = orders.status === 'success' ? orders.data : null
@@ -122,7 +121,7 @@ function OrderCard({ order }: { order: Order }) {
           <Badge tone={status.tone}>{status.label}</Badge>
         </span>
         <span className={list.orderBuyer}>
-          {buyer} · <strong>{formatPrice(order.totalAmount)}</strong>
+          {buyer} · <strong>{formatCedis(order.totalAmount)}</strong>
         </span>
         {items && <span className={list.orderItems}>{items}</span>}
         <span className={list.orderMeta}>{formatDateTime(order.createdAt)}</span>

@@ -1,28 +1,13 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
 import { Dialog } from '@/components/Dialog/Dialog'
 import { Pagination } from '@/components/Pagination/Pagination'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
-import { onDataChanged } from '@/lib/dataEvents'
-import { formatDateTime } from '@/lib/format'
-import {
-  cedis,
-  fetchMyMoney,
-  fetchMySales,
-  fetchMyStatement,
-  formatRating,
-  formatReleaseTime,
-  LEDGER_ENTRY,
-  parseCedis,
-  PAYOUT_STATUS,
-  requestWithdrawal,
-  weekChange,
-  withdrawState,
-  type LedgerEntry,
-  type SalesSummary,
-  type ShopMoney,
-} from '@/lib/payouts'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { cedis, formatDateTime, formatStars, formatWeekdayDateTime, plural } from '@/lib/format'
+import { fetchMyMoney, fetchMySales, fetchMyStatement, formatRating, LEDGER_ENTRY, parseCedis, PAYOUT_STATUS, requestWithdrawal, weekChange, withdrawState, type LedgerEntry, type SalesSummary, type ShopMoney } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import styles from '../vendor.module.css'
 import money from './Money.module.css'
@@ -32,9 +17,8 @@ const PAGE_SIZE = 10
 
 /** What MarketiX owes the vendor, withdrawing it to their MoMo, and every entry behind it. */
 export function Money() {
-  const summary = useAsync(fetchMyMoney)
-  const { reload } = summary
-  useEffect(() => onDataChanged(reload), [reload])
+  usePageTitle('Money')
+  const summary = useAsync(fetchMyMoney, { live: true })
 
   return (
     <>
@@ -67,7 +51,7 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
           <p className={styles.alertInfo}>
             {cedis(Math.max(available, 0))} can be withdrawn now. {cedis(onHold.amount)} from card payments is on hold for {onHold.days}{' '}
             days after the buyer confirms
-            {onHold.nextReleaseAt ? `; the next one is ready on ${formatReleaseTime(onHold.nextReleaseAt)}` : ''}.
+            {onHold.nextReleaseAt ? `; the next one is ready on ${formatWeekdayDateTime(onHold.nextReleaseAt)}` : ''}.
           </p>
         )}
         {sent && (
@@ -159,8 +143,7 @@ function WithdrawDialog({ summary, onClose, onSent }: { summary: ShopMoney; onCl
   // Only what's available now: held card earnings can't be withdrawn yet.
   const { available: balance, minPayout, momo } = summary
   const [text, setText] = useState((balance / 100).toFixed(2))
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending: busy, error, run } = useAction()
 
   const amount = parseCedis(text)
   const invalid =
@@ -175,15 +158,14 @@ function WithdrawDialog({ summary, onClose, onSent }: { summary: ShopMoney; onCl
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (invalid || amount === null) return
-    setBusy(true)
-    setError(null)
-    try {
-      await requestWithdrawal(amount) // the page reloads through onDataChanged
-      onSent(amount)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setBusy(false)
-    }
+    // The page reloads itself (live) and this dialog closes.
+    await run(
+      async () => {
+        await requestWithdrawal(amount)
+        onSent(amount)
+      },
+      { keepPendingOnSuccess: true },
+    )
   }
 
   return (
@@ -277,7 +259,6 @@ function Sales() {
 function SalesBody({ sales }: { sales: SalesSummary }) {
   const { thisWeek, lastWeek, bestSellers, buyers, rating, windowDays } = sales
   const change = weekChange(thisWeek.sales, lastWeek.sales)
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
   return (
     <>
@@ -321,8 +302,7 @@ function SalesBody({ sales }: { sales: SalesSummary }) {
               <li key={r.orderId}>
                 <Link to={`/vendor/orders/${r.orderId}`}>{r.orderNumber}</Link>
                 <span>
-                  {'★'.repeat(r.rating)}
-                  {'☆'.repeat(5 - r.rating)}
+                  {formatStars(r.rating)}
                 </span>
               </li>
             ))}
@@ -390,7 +370,7 @@ function EntryRow({ entry, now }: { entry: LedgerEntry; now: number }) {
           )}
         </span>
         {detail && <span className={money.entryMeta}>{detail}</span>}
-        {heldUntil && <span className={money.entryMeta}>Card payment: can be withdrawn on {formatReleaseTime(heldUntil)}</span>}
+        {heldUntil && <span className={money.entryMeta}>Card payment: can be withdrawn on {formatWeekdayDateTime(heldUntil)}</span>}
       </div>
       <span className={entry.amount < 0 ? money.amountOut : money.amountIn}>
         {entry.amount > 0 ? '+' : ''}

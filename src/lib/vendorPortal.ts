@@ -2,8 +2,9 @@
  * The vendor onboarding API (see VENDOR_ONBOARDING_API.md). Every call acts on the logged-in
  * vendor's own shop; the backend takes the vendor from the access token.
  */
-import { api, apiBlob, apiRequest, ApiError, apiUrl } from './api'
+import { api, apiBlob, ApiError, type ApiPage, apiRequest, apiUrl, isNotFound } from './api'
 import type { TenantStatus } from './tenants'
+import type { ReviewDecision } from './vendors'
 
 export type { TenantStatus } from './tenants'
 
@@ -73,9 +74,9 @@ export type StepKey =
 export interface ShopStatus {
   status: TenantStatus
   canResubmit: boolean
-  steps: { key: StepKey; label: string; done: boolean }[]
+  steps: ChecklistStep<StepKey>[]
   latestReview: {
-    decision: 'APPROVED' | 'MORE_INFO' | 'REJECTED' | 'SUSPENDED' | 'RELEASED' | 'REINSTATED'
+    decision: ReviewDecision
     notes: string | null
     createdAt: string
   } | null
@@ -88,7 +89,7 @@ export async function fetchShopStatus(): Promise<ShopStatus | null> {
   try {
     return await api.get<ShopStatus>('/tenants/status')
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) return null
+    if (isNotFound(err)) return null
     throw err
   }
 }
@@ -115,6 +116,13 @@ export const isReadOnly = (status: TenantStatus) => status === 'SUSPENDED'
 
 export type DocumentType = 'GHANA_CARD_FRONT' | 'GHANA_CARD_BACK' | 'STALL_PHOTO' | 'BUSINESS_REG'
 
+/** One item of a shop's setup checklist. */
+export interface ChecklistStep<K extends string = string> {
+  key: K
+  label: string
+  done: boolean
+}
+
 export interface ShopDocument {
   id: string
   type: DocumentType
@@ -125,7 +133,8 @@ export interface ShopDocument {
 }
 
 export const DOCUMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-export const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024
+/** The largest file the API accepts (documents, photos, banners, sheets): 5 MB. */
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 export const fetchDocuments = () => api.get<ShopDocument[]>('/tenants/documents')
 
@@ -184,11 +193,6 @@ export interface ProductInput {
   measures?: Measure[]
 }
 
-export interface Page<T> {
-  data: T[]
-  meta: { total: number; page: number; limit: number; totalPages: number }
-}
-
 export const MAX_MEASURES = 10
 export const MAX_MEASURE_LABEL = 15
 /** The API caps product pages at 5. */
@@ -196,10 +200,10 @@ export const PRODUCTS_PER_PAGE = 5
 
 export const fetchCategories = () => api.get<Category[]>('/categories')
 
-export function fetchProducts(page: number, search: string): Promise<Page<Product>> {
+export function fetchProducts(page: number, search: string): Promise<ApiPage<Product>> {
   const params = new URLSearchParams({ page: String(page), limit: String(PRODUCTS_PER_PAGE) })
   if (search) params.set('search', search)
-  return api.get<Page<Product>>(`/products?${params}`)
+  return api.get<ApiPage<Product>>(`/products?${params}`)
 }
 
 export const fetchProduct = (id: string) => api.get<Product>(`/products/${id}`)
@@ -211,8 +215,6 @@ export const updateProduct = (id: string, changes: Partial<ProductInput>) =>
   api.patch<Product>(`/products/${id}`, changes)
 
 export const deleteProduct = (id: string) => api.delete<unknown>(`/products/${id}`)
-
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
 /** Uploads (or replaces) a product's photo. JPEG, PNG or WebP, up to 5 MB. */
 export function uploadProductPhoto(id: string, photo: Blob, fileName: string): Promise<{ photoUrl: string }> {
@@ -239,7 +241,6 @@ export interface ShopBanner {
   rejectedReason: string | null
 }
 
-export const MAX_BANNER_BYTES = 5 * 1024 * 1024
 /** Buyers see a square from the centre, so each side must be at least this many pixels. */
 export const MIN_BANNER_SIDE = 300
 
@@ -263,8 +264,6 @@ export const removeShopBanner = () => api.delete<ShopBanner>('/tenants/banner')
 // ---------------------------------------------------------------------------
 // Excel bulk upload
 // ---------------------------------------------------------------------------
-
-export const MAX_SHEET_BYTES = 5 * 1024 * 1024
 
 export const downloadProductTemplate = () => apiBlob('/products/upload/template')
 

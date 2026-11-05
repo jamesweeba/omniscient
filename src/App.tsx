@@ -1,72 +1,89 @@
+import { lazy, Suspense, type ComponentType } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
+import { ErrorBoundary } from '@/components/ErrorBoundary/ErrorBoundary'
+import { PageLoading } from '@/components/PageLoading/PageLoading'
 import { RequireAuth } from '@/components/RequireAuth'
 import { AuthProvider } from '@/context/AuthProvider'
 import { useAuth } from '@/context/auth-context'
-import { AdminLayout } from '@/layouts/AdminLayout/AdminLayout'
 import { homePathFor } from '@/lib/auth'
-import { AdminLogin } from '@/pages/AdminLogin/AdminLogin'
-import { AuditLog } from '@/pages/AuditLog/AuditLog'
-import { NumberPool } from '@/pages/NumberPool/NumberPool'
-import { Orders } from '@/pages/Orders/Orders'
-import { ReviewQueue } from '@/pages/ReviewQueue/ReviewQueue'
-import { VendorOrdersPage } from '@/pages/VendorOrders/VendorOrders'
-import { VendorReviewPage } from '@/pages/VendorReview/VendorReview'
-import { Vendors } from '@/pages/Vendors/Vendors'
-import { Documents } from '@/vendor/pages/Documents'
-import { NewOrder } from '@/vendor/pages/NewOrder'
-import { Orders as VendorOrdersList } from '@/vendor/pages/Orders'
-import { OrderView } from '@/vendor/pages/OrderView'
-import { Money } from '@/vendor/pages/Money'
-import { Payouts } from '@/pages/Payouts/Payouts'
-import { ProductEditor } from '@/vendor/pages/ProductEditor'
-import { Products } from '@/vendor/pages/Products'
-import { ShopDetails } from '@/vendor/pages/ShopDetails'
-import { VendorAuth } from '@/vendor/pages/VendorAuth'
-import { VendorHome } from '@/vendor/pages/VendorHome'
-import { VendorLayout } from '@/vendor/VendorLayout'
+
+// Each page (and each layout) downloads only when it's first opened, so vendors never
+// load the admin app and the first screen arrives sooner on a phone.
+function page<M extends Record<K, ComponentType<any>>, K extends keyof M>(load: () => Promise<M>, name: K) {
+  return lazy(() => load().then((module) => ({ default: module[name] })))
+}
+
+// Admin
+const AdminLayout = page(() => import('@/layouts/AdminLayout/AdminLayout'), 'AdminLayout')
+const AdminLogin = page(() => import('@/pages/AdminLogin/AdminLogin'), 'AdminLogin')
+const AuditLog = page(() => import('@/pages/AuditLog/AuditLog'), 'AuditLog')
+const NumberPool = page(() => import('@/pages/NumberPool/NumberPool'), 'NumberPool')
+const Orders = page(() => import('@/pages/Orders/Orders'), 'Orders')
+const Payouts = page(() => import('@/pages/Payouts/Payouts'), 'Payouts')
+const ReviewQueue = page(() => import('@/pages/ReviewQueue/ReviewQueue'), 'ReviewQueue')
+const VendorOrdersPage = page(() => import('@/pages/VendorOrders/VendorOrders'), 'VendorOrdersPage')
+const VendorReviewPage = page(() => import('@/pages/VendorReview/VendorReview'), 'VendorReviewPage')
+const Vendors = page(() => import('@/pages/Vendors/Vendors'), 'Vendors')
+
+// Vendor
+const VendorLayout = page(() => import('@/vendor/VendorLayout'), 'VendorLayout')
+const Documents = page(() => import('@/vendor/pages/Documents'), 'Documents')
+const Money = page(() => import('@/vendor/pages/Money'), 'Money')
+const NewOrder = page(() => import('@/vendor/pages/NewOrder'), 'NewOrder')
+const OrderView = page(() => import('@/vendor/pages/OrderView'), 'OrderView')
+const ProductEditor = page(() => import('@/vendor/pages/ProductEditor'), 'ProductEditor')
+const Products = page(() => import('@/vendor/pages/Products'), 'Products')
+const ShopDetails = page(() => import('@/vendor/pages/ShopDetails'), 'ShopDetails')
+const VendorAuth = page(() => import('@/vendor/pages/VendorAuth'), 'VendorAuth')
+const VendorHome = page(() => import('@/vendor/pages/VendorHome'), 'VendorHome')
+const VendorOrdersList = page(() => import('@/vendor/pages/Orders'), 'Orders')
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Admin (MarketiX staff) */}
-          <Route path="/login" element={<AdminLoginRoute />} />
-          <Route element={<RequireAuth area="admin" />}>
-            <Route element={<AdminLayout />}>
-              <Route path="review-queue" element={<ReviewQueue />} />
-              <Route path="vendors" element={<Vendors />} />
-              <Route path="vendors/:vendorId" element={<VendorReviewPage />} />
-              <Route path="whatsapp-numbers" element={<NumberPool />} />
-              <Route path="orders" element={<Orders />} />
-              <Route path="orders/:vendorId" element={<VendorOrdersPage />} />
-              <Route path="audit-log" element={<AuditLog />} />
-              <Route path="payouts" element={<Payouts />} />
-            </Route>
-          </Route>
+    <ErrorBoundary fullPage>
+      <AuthProvider>
+        <BrowserRouter>
+          <Suspense fallback={<PageLoading fullPage />}>
+            <Routes>
+              {/* Admin (MarketiX staff) */}
+              <Route path="/login" element={<AdminLoginRoute />} />
+              <Route element={<RequireAuth area="admin" />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="review-queue" element={<ReviewQueue />} />
+                  <Route path="vendors" element={<Vendors />} />
+                  <Route path="vendors/:vendorId" element={<VendorReviewPage />} />
+                  <Route path="whatsapp-numbers" element={<NumberPool />} />
+                  <Route path="orders" element={<Orders />} />
+                  <Route path="orders/:vendorId" element={<VendorOrdersPage />} />
+                  <Route path="audit-log" element={<AuditLog />} />
+                  <Route path="payouts" element={<Payouts />} />
+                </Route>
+              </Route>
 
-          {/* Vendor app */}
-          <Route path="/vendor/signup" element={<VendorAuth mode="signup" />} />
-          <Route path="/vendor/login" element={<VendorAuth mode="login" />} />
-          <Route path="/vendor" element={<RequireAuth area="vendor" />}>
-            <Route element={<VendorLayout />}>
-              <Route index element={<VendorHome />} />
-              <Route path="shop" element={<ShopDetails />} />
-              <Route path="documents" element={<Documents />} />
-              <Route path="products" element={<Products />} />
-              <Route path="products/new" element={<ProductEditor />} />
-              <Route path="products/:productId" element={<ProductEditor />} />
-              <Route path="orders" element={<VendorOrdersList />} />
-              <Route path="orders/new" element={<NewOrder />} />
-              <Route path="orders/:orderId" element={<OrderView />} />
-              <Route path="money" element={<Money />} />
-            </Route>
-          </Route>
+              {/* Vendor app */}
+              <Route path="/vendor/signup" element={<VendorAuth mode="signup" />} />
+              <Route path="/vendor/login" element={<VendorAuth mode="login" />} />
+              <Route path="/vendor" element={<RequireAuth area="vendor" />}>
+                <Route element={<VendorLayout />}>
+                  <Route index element={<VendorHome />} />
+                  <Route path="shop" element={<ShopDetails />} />
+                  <Route path="documents" element={<Documents />} />
+                  <Route path="products" element={<Products />} />
+                  <Route path="products/new" element={<ProductEditor />} />
+                  <Route path="products/:productId" element={<ProductEditor />} />
+                  <Route path="orders" element={<VendorOrdersList />} />
+                  <Route path="orders/new" element={<NewOrder />} />
+                  <Route path="orders/:orderId" element={<OrderView />} />
+                  <Route path="money" element={<Money />} />
+                </Route>
+              </Route>
 
-          <Route path="*" element={<HomeRedirect />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+              <Route path="*" element={<HomeRedirect />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

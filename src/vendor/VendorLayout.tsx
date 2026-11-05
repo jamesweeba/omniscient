@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router'
+import { ErrorBoundary } from '@/components/ErrorBoundary/ErrorBoundary'
+import { LogoMark } from '@/components/LogoMark/LogoMark'
+import { PageLoading } from '@/components/PageLoading/PageLoading'
 import { useAuth } from '@/context/auth-context'
 import { useAsync } from '@/hooks/useAsync'
-import { onDataChanged } from '@/lib/dataEvents'
 import { fetchShopStatus, type ShopStatus } from '@/lib/vendorPortal'
 import type { VendorContext } from './useVendorPortal'
 import styles from './vendor.module.css'
@@ -22,7 +24,8 @@ const NAV = [
 export function VendorLayout() {
   const { logout } = useAuth()
   const { pathname } = useLocation()
-  const result = useAsync(fetchShopStatus)
+  // Any change the vendor makes (shop, documents, products) can change the checklist or status.
+  const result = useAsync(fetchShopStatus, { live: true })
   const { reload } = result
   // Keep showing the last status if a later refresh fails (e.g. a dropped connection while polling).
   const [lastShop, setLastShop] = useState<ShopStatus | null | undefined>(undefined)
@@ -31,8 +34,6 @@ export function VendorLayout() {
   const shop = fresh ?? lastShop
   const waiting = shop?.status === 'STOCKED' || shop?.status === 'UNDER_REVIEW'
 
-  // Any change the vendor makes (shop, documents, products) can change the checklist or status.
-  useEffect(() => onDataChanged(reload), [reload])
 
   useEffect(() => {
     if (!waiting) return
@@ -47,9 +48,7 @@ export function VendorLayout() {
     <div className={styles.shell}>
       <header className={styles.topBar}>
         <Link className={styles.brand} to="/vendor">
-          <span className={styles.logoMark} aria-hidden="true">
-            M
-          </span>
+          <LogoMark />
           MarketiX
         </Link>
         <button className={styles.logout} type="button" onClick={logout}>
@@ -76,7 +75,14 @@ export function VendorLayout() {
           </div>
         )}
         {shop === undefined && result.status === 'loading' && <p className={styles.centered}>Loading your shop…</p>}
-        {shop !== undefined && <Outlet context={{ shop, refresh: reload } satisfies VendorContext} />}
+        {shop !== undefined && (
+          // A crashed page keeps the top bar and menu; moving to another page tries again.
+          <ErrorBoundary resetKey={pathname}>
+            <Suspense fallback={<PageLoading />}>
+              <Outlet context={{ shop, refresh: reload } satisfies VendorContext} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
       </main>
     </div>
   )

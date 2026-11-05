@@ -5,6 +5,8 @@ export interface GhanaPhone {
   international: string
   /** "024 412 7781" — how Ghanaians write it. */
   local: string
+  /** "0244127781" — what the API takes. */
+  compact: string
 }
 
 /** Parses "024 412 7781", "+233 24 412 7781" or "233244127781"; null if not a Ghana number. */
@@ -18,6 +20,7 @@ export function parseGhanaPhone(input: string): GhanaPhone | null {
     digits,
     international: `+233 ${national.slice(0, 2)} ${national.slice(2, 5)} ${national.slice(5)}`,
     local: `0${national.slice(0, 2)} ${national.slice(2, 5)} ${national.slice(5)}`,
+    compact: `0${national}`,
   }
 }
 

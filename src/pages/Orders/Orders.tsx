@@ -3,6 +3,7 @@ import { SearchField, SelectField } from '@/components/FilterControls/FilterCont
 import { PeriodFilter } from '@/components/FilterControls/PeriodFilter'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
 import { periodParam } from '@/lib/orderDisplay'
 import { fetchOrderOverview, type OrderOverviewQuery, type OrderShopSort } from '@/lib/orders'
@@ -21,6 +22,7 @@ const SORT_OPTIONS: { value: OrderShopSort; label: string }[] = [
 ]
 
 export function Orders() {
+  usePageTitle('Orders')
   const [params, updateParams] = useUrlParams()
   const [searchInput, setSearchInput, search] = useSearchParamInput(params, updateParams)
   const period = periodParam(params)

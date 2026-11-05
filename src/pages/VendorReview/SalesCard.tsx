@@ -1,13 +1,11 @@
 import { useCallback } from 'react'
 import { Link } from 'react-router'
 import { useAsync } from '@/hooks/useAsync'
-import { formatDate } from '@/lib/format'
-import { cedis, fetchShopSales, formatRating, weekChange, type SalesSummary } from '@/lib/payouts'
+import { cedis, formatDate, formatStars, plural } from '@/lib/format'
+import { fetchShopSales, formatRating, weekChange, type SalesSummary } from '@/lib/payouts'
 import type { VendorDetail } from '@/lib/vendors'
 import styles from './VendorReview.module.css'
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-const stars = (rating: number) => `${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}`
 
 /** How the shop is selling and what buyers think of it: an early warning about a bad vendor. */
 export function SalesCard({ vendor }: { vendor: VendorDetail }) {
@@ -78,7 +76,7 @@ function SalesContent({ sales }: { sales: SalesSummary }) {
       {rating.recentLow.length > 0 && (
         <p className={styles.flashWarning}>
           Low ratings, last {windowDays} days:{' '}
-          {rating.recentLow.map((r) => `${r.orderNumber} ${stars(r.rating)} (${formatDate(r.ratedAt)})`).join(' · ')}
+          {rating.recentLow.map((r) => `${r.orderNumber} ${formatStars(r.rating)} (${formatDate(r.ratedAt)})`).join(' · ')}
         </p>
       )}
     </>

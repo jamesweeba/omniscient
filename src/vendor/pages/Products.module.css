@@ -140,22 +140,6 @@
   gap: 10px;
 }
 
-.fileButton {
-  position: relative;
-}
-
-.fileButton input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.fileButton:has(input:focus-visible) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
 .rowErrors {
   display: flex;
   flex-direction: column;
@@ -302,24 +286,3 @@
   gap: 8px;
 }
 
-.fileButton {
-  position: relative;
-  width: fit-content;
-}
-
-.fileButton input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.fileButton:has(input:focus-visible) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-.fileButton:has(input:disabled) {
-  cursor: not-allowed;
-  opacity: 0.6;
-}

@@ -1,26 +1,14 @@
 import { useState } from 'react'
 import { useAsync } from '@/hooks/useAsync'
 import { useBlobUrl } from '@/hooks/useBlobUrl'
-import { apiUrl } from '@/lib/api'
+import { apiUrl, errorMessage } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
-import { asJpegName, compressImage } from '@/lib/images'
-import {
-  cancelPendingShopBanner,
-  fetchPendingShopBanner,
-  fetchShopBanner,
-  isReadOnly,
-  MAX_BANNER_BYTES,
-  MIN_BANNER_SIDE,
-  removeShopBanner,
-  uploadShopBanner,
-  type ShopBanner,
-  type TenantStatus,
-} from '@/lib/vendorPortal'
+import { prepareUpload } from '@/lib/images'
+import { cancelPendingShopBanner, fetchPendingShopBanner, fetchShopBanner, isReadOnly, MIN_BANNER_SIDE, removeShopBanner, uploadShopBanner, type ShopBanner, type TenantStatus } from '@/lib/vendorPortal'
+import { FileButton } from '@/vendor/FileButton'
 import styles from '../vendor.module.css'
 import local from './ShopBanner.module.css'
 
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const errorText = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong. Please try again.')
 
 /** The shop image buyers see beside the shop name on the WhatsApp order form, once an admin approves it. */
 export function ShopBannerCard({ status }: { status: TenantStatus }) {
@@ -67,7 +55,7 @@ function BannerEditor({ banner, readOnly, onChange }: BannerEditorProps) {
       setJustUploaded(kind === 'upload')
       setConfirmRemove(false)
     } catch (err) {
-      setError(errorText(err))
+      setError(errorMessage(err))
     } finally {
       setBusy(null)
     }
@@ -77,16 +65,7 @@ function BannerEditor({ banner, readOnly, onChange }: BannerEditorProps) {
   async function pick(file: File) {
     if (!file.type.startsWith('image/')) return setError('Choose an image (JPEG, PNG or WebP).')
     await run('upload', async () => {
-      let blob: Blob = file
-      let name = file.name
-      try {
-        blob = await compressImage(file, 1600)
-        name = asJpegName(file.name)
-      } catch {
-        // The browser can't read it (e.g. some HEIC photos); send it as it is if the API takes it.
-        if (!IMAGE_TYPES.includes(file.type)) throw new Error('We couldn’t read that image. Please save it as a JPEG and try again.')
-      }
-      if (blob.size > MAX_BANNER_BYTES) throw new Error('Banners must be 5 MB or smaller.')
+      const { blob, name } = await prepareUpload(file, { maxSide: 1600, what: 'banner' })
       return uploadShopBanner(blob, name)
     })
   }
@@ -145,19 +124,9 @@ function BannerEditor({ banner, readOnly, onChange }: BannerEditorProps) {
             preview above, so keep your logo or sign in the middle.
           </p>
           <div className={local.actions}>
-            <label className={`${styles.secondary} ${styles.small} ${local.fileButton}`}>
+            <FileButton accept="image/*" disabled={busy !== null} onPick={(file) => void pick(file)}>
               {busy === 'upload' ? 'Uploading…' : banner.url || banner.pendingAt ? 'Upload a new banner' : 'Upload banner'}
-              <input
-                type="file"
-                accept="image/*"
-                disabled={busy !== null}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  e.target.value = ''
-                  if (file) void pick(file)
-                }}
-              />
-            </label>
+            </FileButton>
             {banner.pendingAt && (
               <button className={styles.textButton} type="button" disabled={busy !== null} onClick={() => run('withdraw', cancelPendingShopBanner)}>
                 {busy === 'withdraw' ? 'Withdrawing…' : 'Withdraw new banner'}

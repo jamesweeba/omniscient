@@ -1,17 +1,16 @@
 import { useCallback, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Dialog } from '@/components/Dialog/Dialog'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { isConflict } from '@/lib/api'
+import { errorMessage, isConflict } from '@/lib/api'
 import { formatWaiting } from '@/lib/format'
 import { addNumber, COOLING_DAYS, releaseNumber, type PoolNumber } from '@/lib/numbers'
 import { formatPhone, parseGhanaPhone } from '@/lib/phone'
 import { fetchReviewQueue, fetchVendors } from '@/lib/vendors'
 import form from '@/styles/form.module.css'
 import styles from './NumberPool.module.css'
-
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong. Please try again.')
 
 // ---------------------------------------------------------------------------
 // Add
@@ -28,8 +27,7 @@ export function AddNumberDialog({ onClose, onAdded }: AddNumberDialogProps) {
   const [phone, setPhone] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [wabaId, setWabaId] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
+  const { pending, error, setError, run } = useAction()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -38,21 +36,8 @@ export function AddNumberDialog({ onClose, onAdded }: AddNumberDialogProps) {
     if (!/^\d{6,20}$/.test(id)) return setError('Enter the phone number id from WhatsApp Manager (digits only).')
     if (!parsed) return setError('Enter the phone number, e.g. 0205960861 or +233 20 596 0861.')
 
-    setPending(true)
-    setError(null)
-    try {
-      onAdded(
-        await addNumber({
-          phoneNumberId: id,
-          displayNumber: parsed.local.replace(/\s/g, ''),
-          displayName: displayName.trim() || undefined,
-          wabaId: wabaId.trim() || undefined,
-        }),
-      )
-    } catch (err) {
-      setError(errorMessage(err))
-      setPending(false)
-    }
+    const input = { phoneNumberId: id, displayNumber: parsed.compact, displayName: displayName.trim() || undefined, wabaId: wabaId.trim() || undefined }
+    await run(async () => onAdded(await addNumber(input)), { keepPendingOnSuccess: true })
   }
 
   return (
@@ -197,8 +182,7 @@ interface ReleaseDialogProps {
 /** Releasing the number of an open shop suspends the shop too, so a reason is needed then. */
 export function ReleaseDialog({ number, onClose, onReleased, onConflict }: ReleaseDialogProps) {
   const [reason, setReason] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
+  const { pending, error, setError, run } = useAction()
   const shop = number.vendor
   const shopOpen = shop !== null && shop.status !== 'SUSPENDED'
   const phone = formatPhone(number.phone)
@@ -207,19 +191,17 @@ export function ReleaseDialog({ number, onClose, onReleased, onConflict }: Relea
     event.preventDefault()
     if (shopOpen && !reason.trim()) return setError('Give a reason. The vendor sees it.')
 
-    setPending(true)
-    setError(null)
-    try {
-      const result = await releaseNumber(number.id, shopOpen ? reason.trim() : undefined)
-      onReleased(
-        `${phone} released and cooling for ${COOLING_DAYS} days.${result.suspended && shop ? ` ${shop.shopName} is suspended.` : ''}`,
-      )
-    } catch (err) {
-      // Someone else already released or reassigned it: close and show the latest.
-      if (isConflict(err)) return onConflict(err.message)
-      setError(errorMessage(err))
-      setPending(false)
-    }
+    await run(
+      async () => {
+        const result = await releaseNumber(number.id, shopOpen ? reason.trim() : undefined)
+        onReleased(`${phone} released and cooling for ${COOLING_DAYS} days.${result.suspended && shop ? ` ${shop.shopName} is suspended.` : ''}`)
+      },
+      {
+        keepPendingOnSuccess: true,
+        // Someone else already released or reassigned it: close and show the latest.
+        onError: (err) => (isConflict(err) ? (onConflict(err.message), null) : errorMessage(err)),
+      },
+    )
   }
 
   return (

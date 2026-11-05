@@ -34,26 +34,6 @@
   color: #fff;
 }
 
-.logoMark {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  background: var(--color-accent);
-}
-
-.logoMarkLarge {
-  composes: logoMark;
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
-  font-size: 17px;
-}
-
 .logout {
   padding: 6px 10px;
   font: inherit;
@@ -113,15 +93,6 @@
 
 /* Page heading */
 
-.backLink {
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  text-decoration: none;
-}
-
 .heading {
   display: flex;
   flex-direction: column;
@@ -139,14 +110,6 @@
   margin: 0;
   font-size: 15px;
   color: var(--color-text-muted);
-}
-
-.stepLabel {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-primary);
 }
 
 /* Cards */
@@ -227,12 +190,6 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--color-danger);
-}
-
-.row2 {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
 }
 
 .fieldset {
@@ -412,19 +369,8 @@
   color: var(--color-text-muted);
 }
 
-@media (max-width: 380px) {
-  .row2 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 .visuallyHiddenInline {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  composes: visuallyHidden from '../styles/utility.module.css';
 }
 
 .textarea {

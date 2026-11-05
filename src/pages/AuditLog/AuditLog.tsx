@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { SearchField, SelectField } from '@/components/FilterControls/FilterControls'
 import { PeriodFilter } from '@/components/FilterControls/PeriodFilter'
 import { Pagination } from '@/components/Pagination/Pagination'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
 import { exportAuditLog, fetchAuditAdmins, fetchAuditLog, type AuditAction, type AuditQuery } from '@/lib/audit'
 import { AUDIT_ACTION, AUDIT_ACTION_GROUPS, AUDIT_ACTIONS } from '@/lib/auditDisplay'
@@ -16,6 +18,7 @@ import { AuditTable } from './AuditTable'
 const PAGE_SIZE = 25
 
 export function AuditLog() {
+  usePageTitle('Audit log')
   const [params, updateParams] = useUrlParams()
   const [searchInput, setSearchInput, search] = useSearchParamInput(params, updateParams)
   const period = periodParam(params)
@@ -40,21 +43,16 @@ export function AuditLog() {
   const admins = useAsync(fetchAuditAdmins)
   const data = log.status === 'success' ? log.data : null
 
-  const [exporting, setExporting] = useState(false)
-  const [exportError, setExportError] = useState<string | null>(null)
+  const { pending: exporting, error: exportError, run } = useAction()
 
-  async function handleExport() {
-    setExporting(true)
-    setExportError(null)
-    try {
-      const { blob, fileName } = await exportAuditLog(query)
-      downloadBlob(fileName ?? `marketix-audit-log-${new Date().toISOString().slice(0, 10)}.csv`, blob)
-    } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.')
-    } finally {
-      setExporting(false)
-    }
-  }
+  const handleExport = () =>
+    run(
+      async () => {
+        const { blob, fileName } = await exportAuditLog(query)
+        downloadBlob(fileName ?? `marketix-audit-log-${new Date().toISOString().slice(0, 10)}.csv`, blob)
+      },
+      { fallback: 'Export failed. Please try again.' },
+    )
 
   const hasFilters = Boolean(action || adminId || search)
   const emptyMessage =

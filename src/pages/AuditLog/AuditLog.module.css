@@ -1,26 +1,8 @@
 .exportButton {
-  height: 40px;
+  composes: secondary from '../../styles/form.module.css';
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-input-border);
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.exportButton:hover:not(:disabled) {
-  border-color: var(--color-text-muted);
-}
-
-.exportButton:disabled {
-  color: var(--color-text-disabled);
-  cursor: default;
 }
 
 .clearButton {
@@ -40,10 +22,7 @@
 }
 
 .error {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-danger);
+  composes: error from '../../styles/form.module.css';
 }
 
 .note {

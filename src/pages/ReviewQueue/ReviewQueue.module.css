@@ -26,15 +26,3 @@
 .kycFillPartial {
   background: var(--color-highlight);
 }
-
-@media (max-width: 1000px) {
-  .summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .summary {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}

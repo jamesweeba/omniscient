@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
 import type { AuditEntry } from '@/lib/audit'
 import { AUDIT_ACTION } from '@/lib/auditDisplay'
-import { formatDateTime, formatTimeAgo } from '@/lib/format'
+import { formatDateTime, formatTimeAgo, shortName } from '@/lib/format'
 import { formatPhone } from '@/lib/phone'
 import table from '@/styles/table.module.css'
 import styles from './AuditLog.module.css'
@@ -83,7 +83,3 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
 }
 
 /** "Steph Dua" → "Steph D." */
-function shortName(name: string): string {
-  const [first, ...rest] = name.trim().split(/\s+/)
-  return rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first
-}

@@ -1,0 +1,27 @@
+.inline {
+  composes: screen from '../../styles/utility.module.css';
+}
+
+.fullPage {
+  composes: fullScreen from '../../styles/utility.module.css';
+}
+
+.text {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  opacity: 0;
+  animation: appear 0.2s ease-out 0.3s forwards;
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text {
+    animation: none;
+    opacity: 1;
+  }
+}

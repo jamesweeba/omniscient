@@ -1,0 +1,57 @@
+.inline {
+  composes: screen from '../../styles/utility.module.css';
+}
+
+.fullPage {
+  composes: fullScreen from '../../styles/utility.module.css';
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  padding: 28px 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.primary {
+  composes: primary from '../../styles/form.module.css';
+}
+
+.secondary {
+  composes: secondary from '../../styles/form.module.css';
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  font-size: 15px;
+  text-decoration: none;
+}

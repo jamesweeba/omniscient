@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
-import { formatDateTime, formatShortDate } from '@/lib/format'
+import { DAY, formatDateTime, formatShortDate } from '@/lib/format'
 import { NUMBER_QUALITY, NUMBER_STATUS, formatMessagingLimit, maskPhoneNumberId } from '@/lib/numberDisplay'
 import { COOLING_DAYS, type PoolNumber } from '@/lib/numbers'
 import { formatPhone } from '@/lib/phone'
@@ -9,7 +9,6 @@ import table from '@/styles/table.module.css'
 import styles from './NumberPool.module.css'
 
 const COLUMN_COUNT = 8
-const DAY = 24 * 60 * 60 * 1000
 
 interface NumberTableProps {
   numbers: PoolNumber[]

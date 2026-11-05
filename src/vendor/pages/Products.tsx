@@ -1,44 +1,31 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router'
 import { Pagination } from '@/components/Pagination/Pagination'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
+import { errorMessage } from '@/lib/api'
 import { downloadBlob } from '@/lib/csv'
-import { onDataChanged } from '@/lib/dataEvents'
-import { formatPrice } from '@/lib/format'
-import {
-  deleteProduct,
-  downloadProductTemplate,
-  fetchCategories,
-  fetchProducts,
-  isReadOnly,
-  MAX_SHEET_BYTES,
-  productPhotoSrc,
-  PRODUCTS_PER_PAGE,
-  SheetRowsError,
-  updateProduct,
-  uploadProducts,
-  type Category,
-  type Product,
-  type UploadResult,
-} from '@/lib/vendorPortal'
+import { formatCedis } from '@/lib/format'
+import { deleteProduct, downloadProductTemplate, fetchCategories, fetchProducts, isReadOnly, MAX_UPLOAD_BYTES, productPhotoSrc, PRODUCTS_PER_PAGE, SheetRowsError, updateProduct, uploadProducts, type Category, type Product, type UploadResult } from '@/lib/vendorPortal'
+import { FileButton } from '@/vendor/FileButton'
 import { useVendorPortal } from '../useVendorPortal'
 import styles from '../vendor.module.css'
 import list from './Products.module.css'
 import { LockNotice, VendorPageHeader } from './VendorPageHeader'
 
 export function Products() {
+  usePageTitle('Products')
   const { shop } = useVendorPortal()
   const [params, update] = useUrlParams()
   const [search, setSearch, committedSearch] = useSearchParamInput(params, update)
   const page = pageParam(params)
 
   const load = useCallback(() => fetchProducts(page, committedSearch), [page, committedSearch])
-  const products = useAsync(load)
-  const categories = useAsync(fetchCategories)
-  const { reload } = products
   // Refetch the page after any change (toggle, delete, bulk upload).
-  useEffect(() => onDataChanged(reload), [reload])
+  const products = useAsync(load, { live: true })
+  const categories = useAsync(fetchCategories)
   if (!shop) return null
 
   const editable = !isReadOnly(shop.status)
@@ -102,21 +89,9 @@ export function Products() {
 }
 
 function ProductRow({ product, editable }: { product: Product; editable: boolean }) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, run } = useAction()
 
   /** Runs a change; the list refreshes itself afterwards (via the data-changed signal). */
-  async function run(action: () => Promise<unknown>) {
-    setPending(true)
-    setError(null)
-    try {
-      await action()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-    } finally {
-      setPending(false)
-    }
-  }
 
   return (
     <li className={product.inStock ? list.item : list.itemOut}>
@@ -132,12 +107,12 @@ function ProductRow({ product, editable }: { product: Product; editable: boolean
             {product.measures.length ? (
               product.measures.map((m) => (
                 <li key={m.code}>
-                  {m.label} <strong>{formatPrice(m.price)}</strong>
+                  {m.label} <strong>{formatCedis(m.price)}</strong>
                 </li>
               ))
             ) : (
               <li>
-                <strong>{formatPrice(product.price)}</strong>
+                <strong>{formatCedis(product.price)}</strong>
               </li>
             )}
           </ul>
@@ -196,7 +171,7 @@ function BulkUpload({ categories }: { categories: Category[] }) {
     try {
       downloadBlob('marketix-products-template.xlsx', await downloadProductTemplate())
     } catch (err) {
-      setTemplateError(err instanceof Error ? err.message : 'Couldn’t download the template. Please try again.')
+      setTemplateError(errorMessage(err, 'Couldn’t download the template. Please try again.'))
     }
   }
 
@@ -206,7 +181,7 @@ function BulkUpload({ categories }: { categories: Category[] }) {
       setState({ kind: 'error', fileName, message: 'Upload an Excel file (.xlsx or .xls).' })
       return
     }
-    if (file.size > MAX_SHEET_BYTES) {
+    if (file.size > MAX_UPLOAD_BYTES) {
       setState({ kind: 'error', fileName, message: 'The file is over 5 MB. Split it into smaller files.' })
       return
     }
@@ -215,7 +190,7 @@ function BulkUpload({ categories }: { categories: Category[] }) {
       setState({ kind: 'done', fileName, result: await uploadProducts(file, categoryId || undefined) })
     } catch (err) {
       if (err instanceof SheetRowsError) setState({ kind: 'rows', fileName, error: err })
-      else setState({ kind: 'error', fileName, message: err instanceof Error ? err.message : 'Upload failed. Please try again.' })
+      else setState({ kind: 'error', fileName, message: errorMessage(err, 'Upload failed. Please try again.') })
     }
   }
 
@@ -255,19 +230,14 @@ function BulkUpload({ categories }: { categories: Category[] }) {
         <button className={`${styles.secondary} ${styles.small}`} type="button" onClick={handleTemplate}>
           Download template
         </button>
-        <label className={`${styles.primary} ${styles.small} ${list.fileButton}`}>
+        <FileButton
+          primary
+          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+          disabled={state.kind === 'uploading'}
+          onPick={(file) => void handleFile(file)}
+        >
           {state.kind === 'uploading' ? 'Uploading…' : 'Upload your file'}
-          <input
-            type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-            disabled={state.kind === 'uploading'}
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              e.target.value = ''
-              if (file) void handleFile(file)
-            }}
-          />
-        </label>
+        </FileButton>
       </div>
       {templateError && <p className={styles.alertError}>{templateError}</p>}
 

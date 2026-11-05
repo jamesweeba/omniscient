@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { SearchField } from '@/components/FilterControls/FilterControls'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useUrlParams } from '@/hooks/useUrlState'
 import { QUEUE_FILTERS } from '@/lib/vendorStatus'
 import { fetchAdminSummary, fetchReviewQueue, type VendorStatus } from '@/lib/vendors'
@@ -16,6 +17,7 @@ const ALL_STATUSES = [...new Set(QUEUE_FILTERS.flatMap((f) => f.statuses))]
 const loadQueue = () => fetchReviewQueue(ALL_STATUSES)
 
 export function ReviewQueue() {
+  usePageTitle('Review queue')
   // One request for every chip; the list isn't paginated, so filtering is local.
   const queue = useAsync(loadQueue)
   const summary = useAsync(fetchAdminSummary)

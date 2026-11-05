@@ -1,12 +1,12 @@
 import { useState } from 'react'
+import { useAction } from '@/hooks/useAction'
 import { useBlobUrl } from '@/hooks/useBlobUrl'
-import { apiUrl, isConflict } from '@/lib/api'
+import { apiUrl, conflictNotice, errorMessage, isConflict } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import { approveBanner, fetchPendingBanner, rejectBanner, removeBanner, type VendorDetail } from '@/lib/vendors'
 import type { OnChanged } from './refreshOnConflict'
 import styles from './VendorReview.module.css'
 
-const errorText = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong. Please try again.')
 
 type Mode = { kind: 'idle' } | { kind: 'reject' } | { kind: 'remove' }
 
@@ -18,26 +18,20 @@ export function BannerCard({ vendor, onChanged }: { vendor: VendorDetail; onChan
   const { banner } = vendor
   const [mode, setMode] = useState<Mode>({ kind: 'idle' })
   const [reason, setReason] = useState('')
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, setError, run } = useAction()
   const pendingSrc = useBlobUrl(banner.pendingAt && `${vendor.id}:${banner.pendingAt}`, () => fetchPendingBanner(vendor.id))
 
-  async function act(action: () => Promise<unknown>, success: string) {
-    setPending(true)
-    setError(null)
-    try {
-      await action()
-      setMode({ kind: 'idle' })
-      setReason('')
-      onChanged(success)
-    } catch (err) {
+  const act = (action: () => Promise<unknown>, success: string) =>
+    run(
+      async () => {
+        await action()
+        setMode({ kind: 'idle' })
+        setReason('')
+        onChanged(success)
+      },
       // Someone else acted, or the vendor uploaded a newer banner: show the latest.
-      if (isConflict(err)) onChanged(`${err.message} Showing the latest.`, 'warning')
-      else setError(errorText(err))
-    } finally {
-      setPending(false)
-    }
-  }
+      { onError: (err) => (isConflict(err) ? (onChanged(conflictNotice(err.message), 'warning'), null) : errorMessage(err)) },
+    )
 
   const needsReason = mode.kind !== 'idle'
 

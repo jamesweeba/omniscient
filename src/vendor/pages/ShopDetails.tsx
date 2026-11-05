@@ -1,6 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { DELIVERY_AREAS, DELIVERY_SLOTS, MARKETS, optionId } from '@/lib/locations'
 import { parseGhanaPhone } from '@/lib/phone'
 import {
@@ -20,6 +22,7 @@ import { LockNotice, VendorPageHeader } from './VendorPageHeader'
 
 /** Shop details: the create-shop form for new vendors, the settings form afterwards. */
 export function ShopDetails() {
+  usePageTitle('Shop')
   const { shop } = useVendorPortal()
   const [created, setCreated] = useState(false)
 
@@ -62,7 +65,7 @@ type Errors = Partial<Record<Field, string>>
 const withSaved = (presets: string[], saved: string[]) => [...presets, ...saved.filter((title) => !presets.includes(title))]
 
 /** Phones go to the API as "0244111222". */
-const phoneForApi = (input: string) => parseGhanaPhone(input)?.local.replace(/\s/g, '') ?? null
+const phoneForApi = (input: string) => parseGhanaPhone(input)?.compact ?? null
 
 interface ShopFormProps {
   saved: Shop | null
@@ -98,8 +101,7 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
   const [momoName, setMomoName] = useState(saved?.momoName ?? '')
 
   const [errors, setErrors] = useState<Errors>({})
-  const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
+  const { pending, error, setError, run } = useAction()
 
   /** Checks the form and builds the full set of values, or null if something needs fixing. */
   function buildInput(): ShopInput | null {
@@ -149,21 +151,19 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
       setError('Please fix the highlighted fields.')
       return
     }
-    setPending(true)
-    setError(null)
-    try {
-      if (saved) {
-        const changes = changedFields(saved, input)
-        if (Object.keys(changes).length) await updateShop(changes)
-        navigate('/vendor')
-      } else {
-        await createShop(dropEmpty(input))
-        onCreated?.()
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setPending(false)
-    }
+    await run(
+      async () => {
+        if (saved) {
+          const changes = changedFields(saved, input)
+          if (Object.keys(changes).length) await updateShop(changes)
+          navigate('/vendor')
+        } else {
+          await createShop(dropEmpty(input))
+          onCreated?.()
+        }
+      },
+      { keepPendingOnSuccess: true },
+    )
   }
 
   /** Wraps a setter so editing a field also clears its error. */

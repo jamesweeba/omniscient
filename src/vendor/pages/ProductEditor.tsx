@@ -1,25 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
+import { BackLink } from '@/components/BackLink/BackLink'
+import { CameraIcon } from '@/components/icons/CameraIcon'
 import { useAsync } from '@/hooks/useAsync'
-import { asJpegName, compressImage } from '@/lib/images'
-import {
-  createProduct,
-  deleteProduct,
-  fetchCategories,
-  fetchProduct,
-  isReadOnly,
-  MAX_MEASURE_LABEL,
-  MAX_MEASURES,
-  MAX_PHOTO_BYTES,
-  productPhotoSrc,
-  removeProductPhoto,
-  updateProduct,
-  uploadProductPhoto,
-  type Category,
-  type Measure,
-  type Product,
-  type ProductInput,
-} from '@/lib/vendorPortal'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { errorMessage } from '@/lib/api'
+import { prepareUpload } from '@/lib/images'
+import { createProduct, deleteProduct, fetchCategories, fetchProduct, isReadOnly, MAX_MEASURE_LABEL, MAX_MEASURES, productPhotoSrc, removeProductPhoto, updateProduct, uploadProductPhoto, type Category, type Measure, type Product, type ProductInput } from '@/lib/vendorPortal'
+import { FileButton } from '@/vendor/FileButton'
 import { useVendorPortal } from '../useVendorPortal'
 import styles from '../vendor.module.css'
 import editor from './Products.module.css'
@@ -32,18 +20,14 @@ export function ProductEditor() {
   const loadProduct = useCallback(() => (productId ? fetchProduct(productId) : Promise.resolve(null)), [productId])
   const product = useAsync(loadProduct)
   const categories = useAsync(fetchCategories)
+  usePageTitle(!productId ? 'New product' : product.status === 'success' && product.data ? product.data.name : 'Product')
   if (!shop) return null
 
   const error = product.status === 'error' ? product.error : categories.status === 'error' ? categories.error : null
 
   return (
     <>
-      <Link className={styles.backLink} to="/vendor/products">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-          <path d="M15 6l-6 6 6 6" />
-        </svg>
-        Products
-      </Link>
+      <BackLink to="/vendor/products">Products</BackLink>
       <div className={styles.heading}>
         <h1 className={styles.title}>{productId ? 'Edit product' : 'Add a product'}</h1>
       </div>
@@ -82,7 +66,6 @@ interface EditorState {
   photoError?: string
 }
 
-const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 /** Phones and tablets get a separate "Take photo" button that opens the camera. */
 const hasCamera = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -171,7 +154,7 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
         ? await updateProduct(saved.id, input)
         : await createProduct({ ...input, measures: input.measures?.length ? input.measures : undefined, note: input.note || undefined })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+      setError(errorMessage(err))
       setPending(false)
       return
     }
@@ -181,7 +164,7 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
       if (photo.kind === 'new') await uploadProductPhoto(product.id, photo.blob, photo.name)
       else if (photo.kind === 'remove' && saved?.photoUrl) await removeProductPhoto(product.id)
     } catch (err) {
-      const reason = err instanceof Error ? err.message : 'Please try again.'
+      const reason = errorMessage(err, 'Please try again.')
       if (saved) {
         setPhotoError(`Your changes are saved, but the photo didn’t upload. ${reason}`)
         setPending(false)
@@ -201,19 +184,10 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
     if (!file.type.startsWith('image/')) return setPhotoError('Choose a photo (JPEG, PNG or WebP).')
     setPhotoBusy(true)
     try {
-      let blob: Blob = file
-      let fileName = file.name
-      try {
-        blob = await compressImage(file, 1200)
-        fileName = asJpegName(file.name)
-      } catch {
-        // The browser can't read it (e.g. some HEIC photos); send it as it is if the API takes it.
-        if (!PHOTO_TYPES.includes(file.type)) throw new Error('We couldn’t read that photo. Please take it again as a JPEG.')
-      }
-      if (blob.size > MAX_PHOTO_BYTES) throw new Error('Photos must be 5 MB or smaller.')
-      setPhoto({ kind: 'new', blob, name: fileName, preview: URL.createObjectURL(blob) })
+      const { blob, name } = await prepareUpload(file, { maxSide: 1200, what: 'photo' })
+      setPhoto({ kind: 'new', blob, name, preview: URL.createObjectURL(blob) })
     } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : 'Couldn’t use that photo. Please try another.')
+      setPhotoError(errorMessage(err, 'Couldn’t use that photo. Please try another.'))
     } finally {
       setPhotoBusy(false)
     }
@@ -234,7 +208,7 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
       await deleteProduct(saved.id)
       navigate('/vendor/products')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Couldn’t delete it. Please try again.')
+      setError(errorMessage(err, 'Couldn’t delete it. Please try again.'))
       setPending(false)
     }
   }
@@ -391,19 +365,17 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
           </span>
           <div className={editor.photo}>
             <div className={editor.photoPreview}>
-              {photoSrc ? <img src={photoSrc} alt="Product photo" /> : <CameraIcon />}
+              {photoSrc ? <img src={photoSrc} alt="Product photo" /> : <CameraIcon size={28} />}
             </div>
             <div className={editor.photoActions}>
               {hasCamera && (
-                <label className={`${styles.secondary} ${styles.small} ${editor.fileButton}`}>
+                <FileButton camera accept="image/*" onPick={pickPhoto}>
                   Take photo
-                  <PhotoInput capture onPick={pickPhoto} />
-                </label>
+                </FileButton>
               )}
-              <label className={`${styles.secondary} ${styles.small} ${editor.fileButton}`}>
+              <FileButton accept="image/*" onPick={pickPhoto}>
                 {photoBusy ? 'Preparing…' : photoSrc ? 'Choose another' : hasCamera ? 'Choose from phone' : 'Choose photo'}
-                <PhotoInput onPick={pickPhoto} />
-              </label>
+              </FileButton>
               {photoSrc && (
                 <button
                   className={styles.textButton}
@@ -451,30 +423,7 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
   )
 }
 
-function PhotoInput({ capture = false, onPick }: { capture?: boolean; onPick: (file: File) => void }) {
-  return (
-    <input
-      type="file"
-      accept="image/*"
-      // Opens the back camera on phones; ignored elsewhere.
-      capture={capture ? 'environment' : undefined}
-      onChange={(e) => {
-        const file = e.target.files?.[0]
-        e.target.value = ''
-        if (file) onPick(file)
-      }}
-    />
-  )
-}
 
-function CameraIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-      <circle cx="12" cy="13" r="3.5" />
-    </svg>
-  )
-}
 
 /** Rows to API measures: existing codes are kept; new ones come from the label, made unique. */
 function toMeasures(rows: Row[]): Measure[] {

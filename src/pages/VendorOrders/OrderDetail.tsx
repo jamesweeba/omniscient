@@ -1,9 +1,11 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback } from 'react'
+import { Fact } from '@/components/Fact/Fact'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
-import { formatCedis, formatDateTime, whatsAppLink } from '@/lib/format'
-import { FULFILLMENT, isHiddenBuyer, mapLink, ORDER_STATUS, PAYMENT_METHOD } from '@/lib/orderDisplay'
+import { cedis, formatCedis, formatDateTime, formatStars, whatsAppLink } from '@/lib/format'
+import { deliveryPlace, FULFILLMENT, isHiddenBuyer, mapLink, ORDER_STATUS, orderSubtotal, PAYMENT_METHOD, riderText } from '@/lib/orderDisplay'
 import { fetchAdminOrder, type Order } from '@/lib/orders'
-import { cedis, releaseOrderPayout } from '@/lib/payouts'
+import { releaseOrderPayout } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import { BuyerPhone } from './OrdersTable'
 import styles from './VendorOrders.module.css'
@@ -16,7 +18,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   if (result.status === 'loading') return <p className={styles.muted}>Loading order…</p>
   if (result.status === 'error') return <p className={styles.muted}>{result.error}</p>
   const order = result.data
-  const subtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0)
+  const subtotal = orderSubtotal(order)
   const map = mapLink(order)
 
   return (
@@ -109,7 +111,7 @@ function DeliveryFacts({ order, map }: { order: Order; map: string | null }) {
   return (
     <dl className={styles.facts}>
       {order.fulfillment !== 'PICKUP' && (
-        <Fact label="Address">{order.deliveryAddress ?? ([order.deliveryArea, order.landmark].filter(Boolean).join(' — ') || '—')}</Fact>
+        <Fact label="Address">{deliveryPlace(order) || '—'}</Fact>
       )}
       {order.deliverySlot && <Fact label="When">{order.deliverySlot}</Fact>}
       {map && (
@@ -120,14 +122,13 @@ function DeliveryFacts({ order, map }: { order: Order; map: string | null }) {
         </Fact>
       )}
       {(order.riderName || order.riderPhone) && (
-        <Fact label="Rider">{[order.riderName, order.riderPhone && formatPhone(order.riderPhone)].filter(Boolean).join(' · ')}</Fact>
+        <Fact label="Rider">{riderText(order, 'international')}</Fact>
       )}
       {order.deliveryConfirmedAt && <Fact label="Received">Buyer confirmed on WhatsApp, {formatDateTime(order.deliveryConfirmedAt)}</Fact>}
       {order.buyerRating && (
         <Fact label="Buyer rating">
           <span aria-label={`${order.buyerRating} out of 5 stars`}>
-            {'★'.repeat(order.buyerRating)}
-            {'☆'.repeat(5 - order.buyerRating)}
+            {formatStars(order.buyerRating)}
           </span>
         </Fact>
       )}
@@ -137,8 +138,7 @@ function DeliveryFacts({ order, map }: { order: Order; map: string | null }) {
 
 /** What this order means for the vendor's payout, with "Release" when only the buyer's tap is missing. */
 function VendorPayoutFact({ order, onReleased }: { order: Order; onReleased: () => void }) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, run } = useAction()
   const delivered = order.status === 'DELIVERED' || order.status === 'COMPLETED'
   const { settlement } = order
 
@@ -151,17 +151,15 @@ function VendorPayoutFact({ order, onReleased }: { order: Order; onReleased: () 
   if (order.paymentMethod === 'COD' || !order.paystackPaidAt) return null
   if (!delivered) return <Fact label="Vendor payout">Paid by the buyer; the vendor is paid once the buyer confirms delivery</Fact>
 
-  async function release() {
+  function release() {
     if (!window.confirm(`Pay the vendor for ${order.orderNumber} without the buyer’s confirmation? Only do this if you’ve checked the buyer got it.`)) return
-    setPending(true)
-    setError(null)
-    try {
-      await releaseOrderPayout(order.id)
-      onReleased()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Couldn’t release it. Please try again.')
-      setPending(false)
-    }
+    void run(
+      async () => {
+        await releaseOrderPayout(order.id)
+        onReleased()
+      },
+      { fallback: 'Couldn’t release it. Please try again.', keepPendingOnSuccess: true },
+    )
   }
 
   return (
@@ -175,11 +173,3 @@ function VendorPayoutFact({ order, onReleased }: { order: Order; onReleased: () 
   )
 }
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className={styles.fact}>
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  )
-}

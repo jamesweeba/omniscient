@@ -1,33 +1,19 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
 import { useAsync } from '@/hooks/useAsync'
-import { isConflict } from '@/lib/api'
-import { onDataChanged } from '@/lib/dataEvents'
-import { formatDateTime } from '@/lib/format'
-import {
-  cedis,
-  fetchShopMoney,
-  fetchShopStatement,
-  formatReleaseTime,
-  LEDGER_ENTRY,
-  payVendorNow,
-  PAYOUT_STATUS,
-  setPayoutsPaused,
-  type ShopMoney,
-} from '@/lib/payouts'
+import { errorMessage, isConflict } from '@/lib/api'
+import { cedis, formatDateTime, formatWeekdayDateTime } from '@/lib/format'
+import { fetchShopMoney, fetchShopStatement, LEDGER_ENTRY, payVendorNow, PAYOUT_STATUS, setPayoutsPaused, type ShopMoney } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import type { VendorDetail } from '@/lib/vendors'
 import styles from './VendorReview.module.css'
 
-const errorText = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong. Please try again.')
 
 /** What MarketiX owes this shop, its payouts, and the controls to pause or pay now. */
 export function MoneyCard({ vendor }: { vendor: VendorDetail }) {
   const load = useCallback(() => fetchShopMoney(vendor.id), [vendor.id])
-  const money = useAsync(load)
-  const { reload } = money
-  useEffect(() => onDataChanged(reload), [reload])
+  const money = useAsync(load, { live: true })
 
   return (
     <section className={styles.card} aria-labelledby="money">
@@ -59,12 +45,12 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
     setError(null)
     setFlash(null)
     try {
-      await action() // the card reloads through onDataChanged
+      await action() // the card reloads itself (live)
       setFlash(done)
       setPausing(false)
       setReason('')
     } catch (err) {
-      setError(isConflict(err) ? err.message : errorText(err))
+      setError(isConflict(err) ? err.message : errorMessage(err))
     } finally {
       setBusy(null)
     }
@@ -82,7 +68,7 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
             <dt>Card payments on hold</dt>
             <dd>
               {cedis(onHold.amount)}
-              {onHold.nextReleaseAt && <span className={styles.mutedText}> · next ready {formatReleaseTime(onHold.nextReleaseAt)}</span>}
+              {onHold.nextReleaseAt && <span className={styles.mutedText}> · next ready {formatWeekdayDateTime(onHold.nextReleaseAt)}</span>}
             </dd>
           </div>
         )}
@@ -195,9 +181,7 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
 
 function RecentEntries({ vendorId }: { vendorId: string }) {
   const load = useCallback(() => fetchShopStatement(vendorId, 1, 5), [vendorId])
-  const result = useAsync(load)
-  const { reload } = result
-  useEffect(() => onDataChanged(reload), [reload])
+  const result = useAsync(load, { live: true })
   if (result.status !== 'success' || result.data.data.length === 0) return null
 
   return (

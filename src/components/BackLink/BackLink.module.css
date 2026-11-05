@@ -1,0 +1,13 @@
+.link,
+.small {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.small {
+  font-size: 13px;
+}

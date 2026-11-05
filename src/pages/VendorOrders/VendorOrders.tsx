@@ -1,10 +1,12 @@
 import { useCallback } from 'react'
 import { Link, useParams } from 'react-router'
+import { BackLink } from '@/components/BackLink/BackLink'
 import { SearchField } from '@/components/FilterControls/FilterControls'
 import { PeriodFilter } from '@/components/FilterControls/PeriodFilter'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { StatusBadge } from '@/components/StatusBadge/StatusBadge'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
 import { periodLinkParams, periodParam, SHOP_ORDER_TABS } from '@/lib/orderDisplay'
 import { fetchShopOrders } from '@/lib/orders'
@@ -40,6 +42,7 @@ function VendorOrders({ vendorId }: { vendorId: string }) {
   )
   const orders = useAsync(load)
   const data = orders.status === 'success' ? orders.data : null
+  usePageTitle(data?.shop ? `${data.shop.name} orders` : 'Orders')
 
   // Back to the overview with the same period and search.
   const backParams = new URLSearchParams(periodLinkParams({ period: preset, from, to }))
@@ -48,7 +51,7 @@ function VendorOrders({ vendorId }: { vendorId: string }) {
   if (orders.status === 'error' && !data) {
     return (
       <>
-        <BackLink search={backParams} />
+        <BackToShops search={backParams} />
         <p className={styles.message}>{orders.error}</p>
       </>
     )
@@ -59,7 +62,7 @@ function VendorOrders({ vendorId }: { vendorId: string }) {
 
   return (
     <>
-      <BackLink search={backParams} />
+      <BackToShops search={backParams} />
 
       <header className={page.header}>
         <div className={page.heading}>
@@ -115,13 +118,11 @@ function VendorOrders({ vendorId }: { vendorId: string }) {
   )
 }
 
-function BackLink({ search }: { search: URLSearchParams }) {
+/** Back to the all-shops overview, keeping its period and search. */
+function BackToShops({ search }: { search: URLSearchParams }) {
   return (
-    <Link className={styles.backLink} to={`/orders${search.size ? `?${search}` : ''}`}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-        <path d="M15 6l-6 6 6 6" />
-      </svg>
+    <BackLink to={`/orders${search.size ? `?${search}` : ''}`} small>
       All shops
-    </Link>
+    </BackLink>
   )
 }

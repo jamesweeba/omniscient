@@ -1,4 +1,5 @@
 /** GET /admin/daily-summary: one day of MarketiX at a glance. Amounts are pesewas. */
+import { formatLongDay, relativeDay } from './format'
 import { api, queryString } from './api'
 
 export interface DailySummary {
@@ -35,13 +36,5 @@ export interface DailySummary {
 
 export const fetchDailySummary = (date?: string) => api.get<DailySummary>(`/admin/daily-summary${queryString({ date })}`)
 
-const dayLabel = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' })
-
 /** "Yesterday", "Today" or "Tuesday 3 November". */
-export function formatSummaryDay(date: string, now = new Date()): string {
-  const today = now.toISOString().slice(0, 10) // Accra is GMT all year
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  if (date === today) return 'Today'
-  if (date === yesterday) return 'Yesterday'
-  return dayLabel.format(new Date(`${date}T00:00:00Z`))
-}
+export const formatSummaryDay = (date: string) => relativeDay(date) ?? formatLongDay(date)

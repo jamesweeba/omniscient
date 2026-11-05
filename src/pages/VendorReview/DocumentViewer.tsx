@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Dialog } from '@/components/Dialog/Dialog'
+import { useBlobFile } from '@/hooks/useBlobUrl'
 import { formatShortDate } from '@/lib/format'
 import { fetchVendorDocument, type VendorDocument } from '@/lib/vendors'
 import styles from './VendorReview.module.css'
@@ -14,7 +15,6 @@ interface DocumentViewerProps {
   onClose: () => void
 }
 
-type FileState = { status: 'loading' } | { status: 'ready'; url: string } | { status: 'error'; error: string }
 
 /** Previews KYC documents one at a time, with previous/next (also ← and → keys). */
 export function DocumentViewer({ vendorId, documents, initialIndex, compare, onClose }: DocumentViewerProps) {
@@ -86,28 +86,5 @@ export function DocumentViewer({ vendorId, documents, initialIndex, compare, onC
 }
 
 /** Fetches a document with the token and exposes it as an object URL (revoked on change). */
-function useDocumentFile(vendorId: string, documentId: string | undefined): FileState {
-  const [state, setState] = useState<{ id: string; file: FileState } | null>(null)
-
-  useEffect(() => {
-    if (!documentId) return
-    let objectUrl: string | null = null
-    let cancelled = false
-    fetchVendorDocument(vendorId, documentId).then(
-      (blob) => {
-        if (cancelled) return
-        objectUrl = URL.createObjectURL(blob)
-        setState({ id: documentId, file: { status: 'ready', url: objectUrl } })
-      },
-      (err: unknown) => {
-        if (!cancelled) setState({ id: documentId, file: { status: 'error', error: err instanceof Error ? err.message : 'Couldn’t load the file.' } })
-      },
-    )
-    return () => {
-      cancelled = true
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [vendorId, documentId])
-
-  return state && state.id === documentId ? state.file : { status: 'loading' }
-}
+const useDocumentFile = (vendorId: string, documentId: string | undefined) =>
+  useBlobFile(documentId ? `${vendorId}:${documentId}` : null, () => fetchVendorDocument(vendorId, documentId!))

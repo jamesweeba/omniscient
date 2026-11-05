@@ -1,38 +1,16 @@
 .addButton {
-  height: 40px;
+  composes: primary from '../../styles/form.module.css';
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--color-primary);
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.addButton:hover {
-  background: var(--color-primary-hover);
 }
 
 .flash {
-  margin: 0;
-  padding: 12px 16px;
-  font-size: 14px;
-  color: var(--color-success-fg);
-  background: var(--color-success-bg);
-  border: 1px solid #b9dfc8;
-  border-radius: 10px;
+  composes: flash from '../../styles/utility.module.css';
 }
 
 .flashError {
-  composes: flash;
-  color: var(--color-danger);
-  background: var(--color-danger-bg);
-  border-color: var(--color-danger-bg);
+  composes: flashError from '../../styles/utility.module.css';
 }
 
 .headerActions {
@@ -42,23 +20,9 @@
 }
 
 .secondaryButton {
-  height: 40px;
-  padding: 0 16px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-input-border);
-  border-radius: 8px;
-  cursor: pointer;
+  composes: secondary from '../../styles/form.module.css';
 }
 
-.secondaryButton:hover:not(:disabled) {
-  border-color: var(--color-text-muted);
-}
-
-.secondaryButton:disabled,
 .action:disabled {
   opacity: 0.6;
   cursor: default;
@@ -169,23 +133,6 @@
 .actionAssign {
   composes: action;
   color: var(--color-primary);
-}
-
-/* Assign dialog */
-
-.candidateGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.candidateHeading {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
 }
 
 .candidates {

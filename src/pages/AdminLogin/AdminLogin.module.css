@@ -27,16 +27,6 @@
   color: #fff;
 }
 
-.logoMark {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-accent);
-}
-
 .pitch {
   max-width: 460px;
   display: flex;

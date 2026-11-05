@@ -1,7 +1,7 @@
-import type { BadgeTone } from '@/components/Badge/Badge'
+import { type StatusDisplay } from '@/components/Badge/Badge'
 import type { NumberQuality, NumberStatus } from './numbers'
 
-export const NUMBER_STATUS: Record<NumberStatus, { label: string; tone: BadgeTone }> = {
+export const NUMBER_STATUS: Record<NumberStatus, StatusDisplay> = {
   FREE: { label: 'Free', tone: 'success' },
   ASSIGNED: { label: 'Assigned', tone: 'info' },
   COOLING: { label: 'Cooling', tone: 'neutral' },

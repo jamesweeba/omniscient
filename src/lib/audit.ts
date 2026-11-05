@@ -1,6 +1,6 @@
 /** The admin audit log (append-only; written by the backend with each action). */
-import { api, apiDownload, queryString, type ApiPage } from './api'
-import type { Paginated, PeriodQuery } from './orders'
+import { api, apiDownload, type ApiPage, type Paginated, queryString, toPaginated } from './api'
+import type { PeriodQuery } from './orders'
 
 export type AuditAction =
   | 'REVIEW_STARTED'
@@ -65,7 +65,7 @@ const filterParams = (query: AuditQuery) => ({
 export const fetchAuditLog = (query: AuditQuery & { page: number; pageSize: number }): Promise<Paginated<AuditEntry>> =>
   api
     .get<ApiPage<AuditEntry>>(`/admin/audit-log${queryString({ ...filterParams(query), page: query.page, limit: query.pageSize })}`)
-    .then((r) => ({ items: r.data, total: r.meta.total, page: r.meta.page, pageSize: r.meta.limit }))
+    .then((r) => toPaginated(r))
 
 export const fetchAuditAdmins = (): Promise<AuditAdmin[]> => api.get<AuditAdmin[]>('/admin/audit-log/admins')
 

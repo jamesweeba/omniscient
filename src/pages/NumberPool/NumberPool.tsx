@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
 import { StatCard, StatGrid } from '@/components/StatCard/StatCard'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { useUrlParams } from '@/hooks/useUrlState'
+import { conflictNotice, errorMessage } from '@/lib/api'
 import {
   COOLING_DAYS,
   fetchNumberPool,
@@ -33,9 +35,9 @@ type OpenDialog = { kind: 'add' } | { kind: 'assign'; number: PoolNumber } | { k
 
 type Flash = { tone: 'success' | 'error'; text: string }
 
-const errorText = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong. Please try again.')
 
 export function NumberPool() {
+  usePageTitle('WhatsApp numbers')
   const [params, updateParams] = useUrlParams()
   const filter = FILTERS.find((f) => f.key === params.get('show'))?.key ?? 'all'
   const load = useCallback(() => fetchNumberPool(filter), [filter])
@@ -62,7 +64,7 @@ export function NumberPool() {
     try {
       done({ tone: 'success', text: await action() })
     } catch (err) {
-      done({ tone: 'error', text: errorText(err) })
+      done({ tone: 'error', text: errorMessage(err) })
     } finally {
       setBusyId(null)
     }
@@ -96,7 +98,7 @@ export function NumberPool() {
           : { tone: 'success', text: `Refreshed all ${result.total} numbers from Meta.` },
       )
     } catch (err) {
-      done({ tone: 'error', text: errorText(err) })
+      done({ tone: 'error', text: errorMessage(err) })
     } finally {
       setRefreshingAll(false)
     }
@@ -189,7 +191,7 @@ export function NumberPool() {
           number={dialog.number}
           onClose={() => setDialog(null)}
           onReleased={(message) => done({ tone: 'success', text: message })}
-          onConflict={(message) => done({ tone: 'error', text: `${message} Showing the latest.` })}
+          onConflict={(message) => done({ tone: 'error', text: conflictNotice(message) })}
         />
       )}
     </>

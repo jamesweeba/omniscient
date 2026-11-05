@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { BackLink } from '@/components/BackLink/BackLink'
 import { isKycLocked, isReadOnly, type TenantStatus } from '@/lib/vendorPortal'
 import styles from '../vendor.module.css'
 
@@ -14,12 +14,7 @@ export function VendorPageHeader({ title, lead, noBack }: VendorPageHeaderProps)
   return (
     <>
       {!noBack && (
-        <Link className={styles.backLink} to="/vendor">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-            <path d="M15 6l-6 6 6 6" />
-          </svg>
-          My shop
-        </Link>
+        <BackLink to="/vendor">My shop</BackLink>
       )}
       <div className={styles.heading}>
         <h1 className={styles.title}>{title}</h1>

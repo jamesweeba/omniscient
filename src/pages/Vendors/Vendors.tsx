@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { SearchField, SelectField } from '@/components/FilterControls/FilterControls'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
 import { VENDOR_TABS } from '@/lib/vendorStatus'
 import { fetchMarkets, fetchVendors, type VendorListQuery, type VendorSort } from '@/lib/vendors'
@@ -19,6 +20,7 @@ const SORT_OPTIONS: { value: VendorSort; label: string }[] = [
 ]
 
 export function Vendors() {
+  usePageTitle('Vendors')
   // The URL is the source of truth for filters, so links and the back button work.
   const [params, updateParams] = useUrlParams()
   const [searchInput, setSearchInput, search] = useSearchParamInput(params, updateParams)

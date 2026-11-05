@@ -42,19 +42,6 @@
   font-weight: 700;
 }
 
-.logoMark {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  font-size: 17px;
-  font-weight: 700;
-  background: var(--color-accent);
-  box-shadow: 0 6px 18px rgb(47 160 92 / 0.45);
-}
-
 .pitch {
   display: flex;
   flex-direction: column;

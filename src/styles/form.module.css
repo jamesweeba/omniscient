@@ -51,20 +51,18 @@
   outline-offset: -1px;
 }
 
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+}
+
 .error {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-danger);
-}
-
-.warning {
-  margin: 0;
-  padding: 10px 12px;
-  font-size: 13px;
-  color: var(--color-warning-fg);
-  background: var(--color-warning-bg);
-  border-radius: 8px;
 }
 
 .actions {

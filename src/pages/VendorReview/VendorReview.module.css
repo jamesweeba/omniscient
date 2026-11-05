@@ -1,14 +1,5 @@
 /* Page */
 
-.backLink {
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  text-decoration: none;
-}
-
 .message {
   margin: 0;
   color: var(--color-text-muted);
@@ -115,10 +106,7 @@
 }
 
 .errorText {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-danger);
+  composes: error from '../../styles/form.module.css';
 }
 
 .textLink {
@@ -266,6 +254,7 @@
 
 .productTable td {
   padding: 9px 0;
+  vertical-align: top;
   border-top: 1px solid var(--color-divider);
 }
 
@@ -327,8 +316,7 @@
 }
 
 .dotNeutral,
-.dotSuccess,
-.dotDanger {
+.dotSuccess {
   flex: none;
   width: 8px;
   height: 8px;
@@ -342,10 +330,6 @@
 
 .dotSuccess {
   background: var(--color-primary);
-}
-
-.dotDanger {
-  background: var(--color-danger);
 }
 
 /* Checklist and number options */
@@ -419,14 +403,11 @@
 /* Form fields */
 
 .formField {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
+  composes: field from '../../styles/form.module.css';
 }
 
 .formLabel {
-  font-weight: 600;
+  composes: label from '../../styles/form.module.css';
 }
 
 .formLabelHint {
@@ -434,45 +415,12 @@
   color: var(--color-text-muted);
 }
 
-.input,
-.textarea {
-  font: inherit;
-  font-size: 14px;
-  color: inherit;
-  background: var(--color-surface);
-  border: 1px solid var(--color-input-border);
-  border-radius: 8px;
-}
-
 .input {
-  height: 40px;
-  padding: 0 12px;
+  composes: input from '../../styles/form.module.css';
 }
 
 .textarea {
-  padding: 10px 12px;
-  resize: vertical;
-}
-
-.input:focus,
-.textarea:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -1px;
-}
-
-.input:disabled,
-.textarea:disabled {
-  color: var(--color-text-muted);
-  background: var(--color-surface-muted);
-}
-
-.successBox {
-  margin: 0;
-  padding: 10px 12px;
-  font-size: 13px;
-  color: var(--color-success-fg);
-  background: var(--color-success-bg);
-  border-radius: 8px;
+  composes: textarea from '../../styles/form.module.css';
 }
 
 /* Status panels (active, suspended, rejected) */
@@ -508,20 +456,11 @@
 }
 
 .flash {
-  margin: 0;
-  padding: 12px 16px;
-  font-size: 14px;
-  color: var(--color-success-fg);
-  background: var(--color-success-bg);
-  border: 1px solid #b9dfc8;
-  border-radius: 10px;
+  composes: flash from '../../styles/utility.module.css';
 }
 
 .flashWarning {
-  composes: flash;
-  color: var(--color-warning-fg);
-  background: var(--color-warning-bg);
-  border-color: #f0d48a;
+  composes: flashWarning from '../../styles/utility.module.css';
 }
 
 /* Document viewer */
@@ -739,16 +678,7 @@
 
 /* Products card: every product, with photos */
 .visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.productTable td {
-  vertical-align: top;
+  composes: visuallyHidden from '../../styles/utility.module.css';
 }
 
 .photoCell {

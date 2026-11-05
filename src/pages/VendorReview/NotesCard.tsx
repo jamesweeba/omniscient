@@ -1,6 +1,7 @@
 import { useCallback, useId, useState, type FormEvent } from 'react'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
-import { ApiError } from '@/lib/api'
+import { errorMessage, isNotFound } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import {
   addVendorNote,
@@ -13,7 +14,6 @@ import {
 } from '@/lib/vendors'
 import styles from './VendorReview.module.css'
 
-const errorText = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong. Please try again.')
 
 /** Admins' private notes on the shop: calls made, promises, follow-ups. The vendor never sees them. */
 export function NotesCard({ vendor }: { vendor: VendorDetail }) {
@@ -67,24 +67,14 @@ interface NoteFormProps {
 function NoteForm({ initial = '', submitLabel, placeholder, onSubmit, onCancel }: NoteFormProps) {
   const id = useId()
   const [body, setBody] = useState(initial)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, setError, run } = useAction()
   const trimmed = body.trim()
   const tooLong = body.length > MAX_NOTE_LENGTH
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!trimmed || tooLong) return
-    setPending(true)
-    setError(null)
-    try {
-      await onSubmit(trimmed)
-      if (!onCancel) setBody('')
-    } catch (err) {
-      setError(errorText(err))
-    } finally {
-      setPending(false)
-    }
+    if ((await run(() => onSubmit(trimmed))) && !onCancel) setBody('')
   }
 
   return (
@@ -137,26 +127,22 @@ interface NoteItemProps {
 
 function NoteItem({ vendorId, note, onChanged }: NoteItemProps) {
   const [mode, setMode] = useState<'view' | 'edit' | 'confirmDelete'>('view')
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, setError, run } = useAction()
 
   /** A 404 means someone already deleted it: just refresh the list. */
   function handleError(err: unknown) {
-    if (err instanceof ApiError && err.status === 404) onChanged()
-    else setError(errorText(err))
+    if (isNotFound(err)) onChanged()
+    else setError(errorMessage(err))
   }
 
-  async function remove() {
-    setPending(true)
-    setError(null)
-    try {
-      await deleteVendorNote(vendorId, note.id)
-      onChanged()
-    } catch (err) {
-      handleError(err)
-      setPending(false)
-    }
-  }
+  const remove = () =>
+    run(
+      async () => {
+        await deleteVendorNote(vendorId, note.id)
+        onChanged()
+      },
+      { keepPendingOnSuccess: true, onError: (err) => (isNotFound(err) ? (onChanged(), null) : errorMessage(err)) },
+    )
 
   return (
     <li className={styles.noteItem}>
@@ -179,7 +165,7 @@ function NoteItem({ vendorId, note, onChanged }: NoteItemProps) {
               setMode('view')
               onChanged()
             } catch (err) {
-              if (err instanceof ApiError && err.status === 404) return handleError(err)
+              if (isNotFound(err)) return handleError(err)
               throw err
             }
           }}

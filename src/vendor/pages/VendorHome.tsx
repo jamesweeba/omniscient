@@ -2,9 +2,12 @@ import QRCode from 'qrcode'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '@/context/auth-context'
-import { formatDateTime } from '@/lib/format'
+import { useAction } from '@/hooks/useAction'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { errorMessage } from '@/lib/api'
+import { formatDateTime, whatsAppLink } from '@/lib/format'
 import { sendOrderForm } from '@/lib/orders'
-import { formatPhone, parseGhanaPhone } from '@/lib/phone'
+import { formatPhone } from '@/lib/phone'
 import { useAsync } from '@/hooks/useAsync'
 import { fetchShop, resubmitShop, type ShopStatus, type StepKey } from '@/lib/vendorPortal'
 import { useVendorPortal } from '../useVendorPortal'
@@ -19,6 +22,7 @@ const GROUPS: { title: string; to: string; keys: StepKey[] }[] = [
 ]
 
 export function VendorHome() {
+  usePageTitle('Home')
   const { session } = useAuth()
   const { shop } = useVendorPortal()
   const details = useAsync(fetchShop)
@@ -156,20 +160,10 @@ function StatusCard({ shop, ownerPhone }: { shop: ShopStatus; ownerPhone: string
 }
 
 function ResubmitButton() {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { pending, error, run } = useAction()
 
-  async function handleClick() {
-    setPending(true)
-    setError(null)
-    try {
-      // The layout refreshes the status after any change, which hides this button.
-      await resubmitShop()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setPending(false)
-    }
-  }
+  // The layout refreshes the status after any change, which hides this button.
+  const handleClick = () => run(resubmitShop, { keepPendingOnSuccess: true })
 
   return (
     <>
@@ -193,8 +187,7 @@ interface LiveCardProps {
 
 function LiveCard({ number, ownerPhone }: LiveCardProps) {
   const [copied, setCopied] = useState(false)
-  const digits = parseGhanaPhone(number.displayNumber)?.digits ?? number.displayNumber.replace(/\D/g, '')
-  const link = `https://wa.me/${digits}?text=Hi`
+  const link = whatsAppLink(number.displayNumber, 'Hi')
   const qr = useQrCode(link)
 
   return (
@@ -263,7 +256,7 @@ function TestOrderButton({ ownerPhone }: { ownerPhone: string }) {
       await sendOrderForm(ownerPhone)
       setState({ kind: 'sent' })
     } catch (err) {
-      setState({ kind: 'error', message: err instanceof Error ? err.message : 'Couldn’t send it. Please try again.' })
+      setState({ kind: 'error', message: errorMessage(err, 'Couldn’t send it. Please try again.') })
     }
   }
 

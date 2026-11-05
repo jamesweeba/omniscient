@@ -1,8 +1,10 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { Suspense, useEffect, useRef, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
+import { ErrorBoundary } from '@/components/ErrorBoundary/ErrorBoundary'
+import { LogoMark } from '@/components/LogoMark/LogoMark'
+import { PageLoading } from '@/components/PageLoading/PageLoading'
 import { useAuth } from '@/context/auth-context'
 import { useAsync } from '@/hooks/useAsync'
-import { onDataChanged } from '@/lib/dataEvents'
 import { shortName } from '@/lib/format'
 import { fetchPayoutsOverview } from '@/lib/payouts'
 import { fetchAdminSummary } from '@/lib/vendors'
@@ -10,14 +12,9 @@ import styles from './AdminLayout.module.css'
 
 export function AdminLayout() {
   const { session, logout } = useAuth()
-  const summary = useAsync(fetchAdminSummary)
-  const payouts = useAsync(fetchPayoutsOverview)
-  const { reload } = summary
-  const { reload: reloadPayouts } = payouts
-
   // Keep the sidebar counts current after approvals, releases, payouts, etc.
-  useEffect(() => onDataChanged(reload), [reload])
-  useEffect(() => onDataChanged(reloadPayouts), [reloadPayouts])
+  const summary = useAsync(fetchAdminSummary, { live: true })
+  const payouts = useAsync(fetchPayoutsOverview, { live: true })
   const counts = summary.status === 'success' ? summary.data : null
   const failedPayouts = payouts.status === 'success' ? payouts.data.failedPayouts : 0
 
@@ -31,9 +28,7 @@ export function AdminLayout() {
     <div className={styles.shell}>
       <nav className={styles.sidebar} aria-label="Admin">
         <div className={styles.brand}>
-          <span className={styles.logoMark} aria-hidden="true">
-            M
-          </span>
+          <LogoMark />
           <div className={styles.brandText}>
             <span className={styles.brandName}>MarketiX</span>
             <span className={styles.brandRole}>Super admin</span>
@@ -85,7 +80,12 @@ export function AdminLayout() {
         </header>
 
         <main ref={contentRef} className={styles.content}>
-          <Outlet />
+          {/* A crashed page keeps the sidebar; moving to another page tries again. */}
+          <ErrorBoundary resetKey={pathname}>
+            <Suspense fallback={<PageLoading />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

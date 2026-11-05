@@ -3,10 +3,10 @@ import { Link } from 'react-router'
 import { StatCard, StatGrid } from '@/components/StatCard/StatCard'
 import { useAsync } from '@/hooks/useAsync'
 import { fetchDailySummary, formatSummaryDay, type DailySummary as Summary } from '@/lib/dailySummary'
-import { cedis } from '@/lib/payouts'
+import { cedis, plural } from '@/lib/format'
+import {  } from '@/lib/payouts'
 import styles from './DailySummary.module.css'
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /** Yesterday (or any earlier day) at a glance: sales, commission, payouts, new shops, and what needs an admin now. */
 export function DailySummary() {

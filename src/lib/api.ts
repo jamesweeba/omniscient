@@ -17,8 +17,17 @@ export class ApiError extends Error {
   }
 }
 
+/** What to tell the user about a failed action: the server's message, or `fallback`. */
+export const errorMessage = (err: unknown, fallback = FALLBACK_ERROR) => (err instanceof Error && err.message ? err.message : fallback)
+
 /** A 409: the action clashes with the current state (usually someone else acted first). */
 export const isConflict = (err: unknown): err is ApiError => err instanceof ApiError && err.status === 409
+
+/** A 404: the thing was deleted or never existed. */
+export const isNotFound = (err: unknown): err is ApiError => err instanceof ApiError && err.status === 404
+
+/** What to show after a 409, once the page has reloaded the latest data. */
+export const conflictNotice = (message: string) => `${message} Showing the latest.`
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -104,6 +113,20 @@ export function apiUrl(path: string): string {
 export interface ApiPage<T> {
   data: T[]
   meta: { total: number; page: number; limit: number; totalPages: number }
+}
+
+/** A page of a list, as the screens use it. */
+export interface Paginated<T> {
+  items: T[]
+  total: number
+  /** 1-based. */
+  page: number
+  pageSize: number
+}
+
+/** An API page as a Paginated list, mapping each item (by default, as it is). */
+export function toPaginated<A, T = A>(result: ApiPage<A>, map: (item: A) => T = (item) => item as unknown as T): Paginated<T> {
+  return { items: result.data.map(map), total: result.meta.total, page: result.meta.page, pageSize: result.meta.limit }
 }
 
 /** Builds a query string, leaving out empty values. */

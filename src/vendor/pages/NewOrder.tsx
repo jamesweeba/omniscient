@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
+import { BackLink } from '@/components/BackLink/BackLink'
+import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
-import { formatPrice } from '@/lib/format'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { formatCedis } from '@/lib/format'
 import { PAYMENT_METHOD } from '@/lib/orderDisplay'
 import { createOrder, type Fulfillment, type PaymentMethod } from '@/lib/orders'
 import { parseGhanaPhone } from '@/lib/phone'
@@ -23,18 +26,14 @@ const newItem = (): ItemRow => ({ key: nextKey++, name: '', price: '', quantity:
 
 /** An order that came in by phone or in person; the server works out the totals. */
 export function NewOrder() {
+  usePageTitle('New order')
   const { shop } = useVendorPortal()
   const details = useAsync(fetchShop)
   if (!shop) return null
 
   return (
     <>
-      <Link className={styles.backLink} to="/vendor/orders">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-          <path d="M15 6l-6 6 6 6" />
-        </svg>
-        Orders
-      </Link>
+      <BackLink to="/vendor/orders">Orders</BackLink>
       <div className={styles.heading}>
         <h1 className={styles.title}>Add a phone order</h1>
         <p className={styles.lead}>For orders a buyer gave you by phone or at your stall.</p>
@@ -61,8 +60,7 @@ function NewOrderForm({ defaultFee }: { defaultFee: number }) {
   const [address, setAddress] = useState('')
   const [fee, setFee] = useState(String(defaultFee))
   const [notes, setNotes] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
+  const { pending, error, setError, run } = useAction()
 
   const delivery = fulfillment === 'DELIVERY'
   const itemsTotal = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 0), 0)
@@ -82,23 +80,22 @@ function NewOrderForm({ defaultFee }: { defaultFee: number }) {
     }
     if (delivery && !(Number(fee) >= 0)) return setError('Enter the delivery fee (0 or more).')
 
-    setPending(true)
-    setError(null)
-    try {
-      const order = await createOrder({
-        buyerPhone: parsed.local.replace(/\s/g, ''),
-        items: filled.map((i) => ({ productName: i.name.trim(), unitPrice: Number(i.price), quantity: Math.round(Number(i.quantity)) })),
-        paymentMethod: payment,
-        fulfillment,
-        deliveryAddress: delivery && address.trim() ? address.trim() : undefined,
-        deliveryFee: delivery ? Number(fee) : 0,
-        notes: notes.trim() || undefined,
-      })
-      navigate(`/vendor/orders/${order.id}`, { replace: true })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-      setPending(false)
+    const input = {
+      buyerPhone: parsed.compact,
+      items: filled.map((i) => ({ productName: i.name.trim(), unitPrice: Number(i.price), quantity: Math.round(Number(i.quantity)) })),
+      paymentMethod: payment,
+      fulfillment,
+      deliveryAddress: delivery && address.trim() ? address.trim() : undefined,
+      deliveryFee: delivery ? Number(fee) : 0,
+      notes: notes.trim() || undefined,
     }
+    await run(
+      async () => {
+        const order = await createOrder(input)
+        navigate(`/vendor/orders/${order.id}`, { replace: true })
+      },
+      { keepPendingOnSuccess: true },
+    )
   }
 
   return (
@@ -172,7 +169,7 @@ function NewOrderForm({ defaultFee }: { defaultFee: number }) {
         </label>
       </fieldset>
 
-      <p className={styles.muted}>Total about {formatPrice(total)}. We work out the exact total when you save.</p>
+      <p className={styles.muted}>Total about {formatCedis(total)}. We work out the exact total when you save.</p>
       {error && (
         <p className={styles.alertError} role="alert">
           {error}

@@ -4,7 +4,7 @@ import { useAsync } from '@/hooks/useAsync'
 import { CHECKLIST } from '@/lib/checklist'
 import { fetchFreeNumbers } from '@/lib/numbers'
 import { formatPhone } from '@/lib/phone'
-import { isConflict } from '@/lib/api'
+import { conflictNotice, errorMessage, isConflict } from '@/lib/api'
 import { approveVendor, saveChecks, sendBack, type ChecklistKey, type VendorDetail } from '@/lib/vendors'
 import { NEXT_FREE, NumberPicker } from './NumberPicker'
 import type { OnChanged } from './refreshOnConflict'
@@ -54,9 +54,9 @@ export function DecisionPanel({ vendor, onChanged }: DecisionPanelProps) {
       await saveChecks(vendor.id, { [key]: value })
     } catch (err) {
       // The shop changed under us (e.g. someone else decided): reload it.
-      if (isConflict(err)) return onChanged(`${err.message} Showing the latest.`, 'warning')
+      if (isConflict(err)) return onChanged(conflictNotice(err.message), 'warning')
       setChecks((current) => ({ ...current, [key]: !value }))
-      setChecksError(err instanceof Error ? err.message : 'Couldn’t save that tick. Try again.')
+      setChecksError(errorMessage(err, 'Couldn’t save that tick. Try again.'))
     }
   }
 
@@ -90,10 +90,10 @@ export function DecisionPanel({ vendor, onChanged }: DecisionPanelProps) {
         onChanged('Rejected. The vendor sees your note and can resubmit.')
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+      const message = errorMessage(err)
       // These two 409s are about the number, not the shop: handle them here.
       if (NUMBER_TAKEN.test(message)) numbers.reload()
-      else if (isConflict(err) && !NO_NUMBERS.test(message)) return onChanged(`${message} Showing the latest.`, 'warning')
+      else if (isConflict(err) && !NO_NUMBERS.test(message)) return onChanged(conflictNotice(message), 'warning')
       setError(message)
       setPending(null)
     }
