@@ -5,7 +5,7 @@ import { useAsync } from '@/hooks/useAsync'
 import { isConflict } from '@/lib/api'
 import { onDataChanged } from '@/lib/dataEvents'
 import { formatDateTime } from '@/lib/format'
-import { cedis, fetchShopMoney, fetchShopStatement, formatPayoutDay, LEDGER_ENTRY, payVendorNow, PAYOUT_STATUS, setPayoutsPaused, type ShopMoney } from '@/lib/payouts'
+import { cedis, fetchShopMoney, fetchShopStatement, LEDGER_ENTRY, payVendorNow, PAYOUT_STATUS, setPayoutsPaused, type ShopMoney } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import type { VendorDetail } from '@/lib/vendors'
 import styles from './VendorReview.module.css'
@@ -95,16 +95,19 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
         )}
       </p>
       {lastPayout?.status === 'FAILED' && lastPayout.failureReason && <p className={styles.errorText}>Last payout failed: {lastPayout.failureReason}</p>}
-      {payouts.enabled && !payouts.paused && balance >= money.minPayout && (
-        <p className={styles.mutedText}>Paid automatically at the next payout: {formatPayoutDay(payouts.nextPayoutAt)}.</p>
+      {payouts.enabled && !payouts.paused && (
+        <p className={styles.mutedText}>
+          {payouts.nextWithdrawalAt ? 'The vendor has withdrawn today.' : 'The vendor can withdraw today.'} Nothing is sent until they
+          withdraw or you pay now.
+        </p>
       )}
-      {payouts.paused && <p className={styles.flashWarning}>Payouts paused: {payouts.pausedReason}</p>}
+      {payouts.paused && <p className={styles.flashWarning}>Withdrawals paused: {payouts.pausedReason}</p>}
       {!payouts.enabled && <p className={styles.mutedText}>Payouts are switched off for everyone (PAYOUTS_ENABLED), so nothing is sent yet.</p>}
 
       {pausing && (
         <div className={styles.formField}>
           <label className={styles.formLabel} htmlFor="pause-reason">
-            Why pause payouts? <span className={styles.formLabelHint}>(admins only)</span>
+            Why pause withdrawals? <span className={styles.formLabelHint}>(admins only)</span>
           </label>
           <textarea
             id="pause-reason"
@@ -142,8 +145,8 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
           </button>
         )}
         {payouts.paused ? (
-          <button className={styles.secondaryButton} type="button" disabled={busy !== null} onClick={() => act('pause', () => setPayoutsPaused(vendorId, false), 'Payouts resumed.')}>
-            {busy === 'pause' ? 'Saving…' : 'Resume payouts'}
+          <button className={styles.secondaryButton} type="button" disabled={busy !== null} onClick={() => act('pause', () => setPayoutsPaused(vendorId, false), 'Withdrawals resumed.')}>
+            {busy === 'pause' ? 'Saving…' : 'Resume withdrawals'}
           </button>
         ) : pausing ? (
           <>
@@ -151,9 +154,9 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
               className={styles.dangerButton}
               type="button"
               disabled={busy !== null || !reason.trim()}
-              onClick={() => act('pause', () => setPayoutsPaused(vendorId, true, reason.trim()), 'Payouts paused. Money keeps adding up until you resume.')}
+              onClick={() => act('pause', () => setPayoutsPaused(vendorId, true, reason.trim()), 'Withdrawals paused. Money keeps adding up until you resume.')}
             >
-              {busy === 'pause' ? 'Saving…' : 'Pause payouts'}
+              {busy === 'pause' ? 'Saving…' : 'Pause withdrawals'}
             </button>
             <button className={styles.secondaryButton} type="button" disabled={busy !== null} onClick={() => setPausing(false)}>
               Cancel
@@ -161,7 +164,7 @@ function MoneyContent({ vendorId, money }: { vendorId: string; money: ShopMoney 
           </>
         ) : (
           <button className={styles.dangerButton} type="button" disabled={busy !== null} onClick={() => setPausing(true)}>
-            Pause payouts
+            Pause withdrawals
           </button>
         )}
       </div>

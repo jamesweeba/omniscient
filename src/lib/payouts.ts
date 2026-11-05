@@ -3,6 +3,7 @@ import { api, queryString, type ApiPage } from './api'
 
 export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'
 export type PayoutStatusFilter = 'all' | 'pending' | 'processing' | 'success' | 'failed'
+export type PayoutSource = 'VENDOR' | 'ADMIN' | 'AUTOMATIC'
 export type LedgerEntryType = 'ORDER_EARNING' | 'CASH_COMMISSION' | 'PAYOUT' | 'PAYOUT_REVERSAL'
 
 export interface Payout {
@@ -15,6 +16,8 @@ export interface Payout {
   momoNumber: string
   momoName: string | null
   initiatedById: string | null
+  /** Who started it. Payouts from before withdrawals came in are AUTOMATIC (the old 7 am run). */
+  source?: PayoutSource
   failureReason: string | null
   paidAt: string | null
   createdAt: string
@@ -51,10 +54,11 @@ export interface ShopMoney {
     enabled: boolean
     paused: boolean
     pausedReason: string | null
-    /** "Every morning at 7:00 am, Monday to Saturday". */
-    schedule: string
-    /** The next daily payout run (ISO). */
-    nextPayoutAt: string
+    /**
+     * Set when the vendor has already withdrawn today (Accra time): the next midnight in Accra,
+     * when they can withdraw again (ISO). Null when they can withdraw today.
+     */
+    nextWithdrawalAt: string | null
   }
   momo: { number: string | null; name: string | null }
   commissionPercent: number
@@ -78,6 +82,27 @@ export const fetchMyMoney = () => api.get<ShopMoney>('/payouts/summary')
 export const fetchMyStatement = (page: number, pageSize: number) =>
   api.get<ApiPage<LedgerEntry>>(`/payouts/statement${queryString({ page, limit: pageSize })}`)
 
+/** Send `amount` pesewas of the balance to the vendor's MoMo. Once per day (Accra time). */
+export const requestWithdrawal = (amount: number) => api.post<Payout>('/payouts/withdraw', { amount })
+
+export type WithdrawState = { canWithdraw: true } | { canWithdraw: false; reason: string }
+
+/**
+ * Whether the vendor can withdraw now, and if not, why (in words for the vendor).
+ * The server checks all of this again and answers 409 with its own reason.
+ */
+export function withdrawState(money: ShopMoney): WithdrawState {
+  const { payouts, balance, inFlight, minPayout, momo } = money
+  const no = (reason: string): WithdrawState => ({ canWithdraw: false, reason })
+  if (payouts.paused) return no('Withdrawals for your shop are on hold. MarketiX will contact you.')
+  if (!payouts.enabled) return no('Withdrawals to MoMo start soon. Your balance is safe and you can withdraw all of it then.')
+  if (!momo.number) return no('Add your MoMo number in Shop details before you withdraw.')
+  if (inFlight > 0) return no('Wait for the money on its way to land before you withdraw again.')
+  if (payouts.nextWithdrawalAt) return no(`You can withdraw once a day. Next withdrawal: ${formatWithdrawalDay(payouts.nextWithdrawalAt)}.`)
+  if (balance < minPayout) return no(`You can withdraw once your balance reaches ${cedis(minPayout)}.`)
+  return { canWithdraw: true }
+}
+
 // ── Admin ───────────────────────────────────────────────────────────────────
 
 export interface PayoutsOverview {
@@ -87,8 +112,6 @@ export interface PayoutsOverview {
   last30Days: { paidOut: number; commission: number }
   payoutsEnabled: boolean
   commissionPercent: number
-  schedule: string
-  nextPayoutAt: string
 }
 
 export interface VendorBalance {
@@ -121,6 +144,7 @@ export const fetchShopStatement = (vendorId: string, page: number, pageSize: num
 
 export const payVendorNow = (vendorId: string) => api.post<Payout>(`/admin/tenants/${vendorId}/payouts/pay-now`)
 
+/** Stop or restart the shop's withdrawals. */
 export const setPayoutsPaused = (vendorId: string, paused: boolean, reason?: string) =>
   api.post<{ paused: boolean }>(`/admin/tenants/${vendorId}/payouts/pause`, { paused, reason })
 
@@ -132,13 +156,17 @@ export const releaseOrderPayout = (orderId: string) => api.post<{ released: bool
 const dayFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Accra', weekday: 'long', day: 'numeric', month: 'short' })
 const accraDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Accra' }) // yyyy-mm-dd
 
-/** "Today, 7:00 am", "Tomorrow, 7:00 am" or "Monday 9 Nov, 7:00 am" (Accra time). */
-export function formatPayoutDay(iso: string, now = new Date()): string {
-  const day = accraDay.format(new Date(iso))
-  const today = accraDay.format(now)
+/** "tomorrow" when `iso` is the next day in Accra, else "Monday 9 Nov". */
+export function formatWithdrawalDay(iso: string, now = new Date()): string {
   const tomorrow = accraDay.format(new Date(now.getTime() + 24 * 60 * 60 * 1000))
-  const label = day === today ? 'Today' : day === tomorrow ? 'Tomorrow' : dayFormat.format(new Date(iso))
-  return `${label}, 7:00 am`
+  return accraDay.format(new Date(iso)) === tomorrow ? 'tomorrow' : dayFormat.format(new Date(iso))
+}
+
+/** Pesewas from what the vendor typed ("150", "150.5", "1,200.00"); null if it isn't an amount. */
+export function parseCedis(text: string): number | null {
+  const clean = text.replace(/[,\s]/g, '').replace(/^GH₵/i, '')
+  if (!/^\d+(\.\d{1,2})?$/.test(clean)) return null
+  return Math.round(Number(clean) * 100)
 }
 
 /** "GH₵ 1,234.50" from pesewas; negative amounts get a minus sign. */
@@ -154,9 +182,15 @@ export const PAYOUT_STATUS: Record<PayoutStatus, { label: string; tone: 'success
   FAILED: { label: 'Failed', tone: 'danger' },
 }
 
+/** "Vendor withdrawal", "Sent by an admin" or "Automatic". */
+export function payoutSourceLabel(p: Pick<Payout, 'source' | 'initiatedById'>): string {
+  const source = p.source ?? (p.initiatedById ? 'ADMIN' : 'AUTOMATIC')
+  return source === 'VENDOR' ? 'Vendor withdrawal' : source === 'ADMIN' ? 'Sent by an admin' : 'Automatic'
+}
+
 export const LEDGER_ENTRY: Record<LedgerEntryType, string> = {
   ORDER_EARNING: 'Order paid out',
   CASH_COMMISSION: 'Commission on cash order',
-  PAYOUT: 'Sent to MoMo',
-  PAYOUT_REVERSAL: 'Payout failed: back in balance',
+  PAYOUT: 'Withdrawn to MoMo',
+  PAYOUT_REVERSAL: 'Withdrawal failed: back in balance',
 }

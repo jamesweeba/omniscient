@@ -430,16 +430,36 @@ Banner state:
 
 ### 4.11 Money (payouts)
 
-MarketiX collects MoMo and card payments in its own Paystack account and pays each vendor to their MoMo number (`momoNumber`) **when the buyer confirms delivery** (the "✅ I got my order" button, 4.8), or when an admin releases the order. All amounts in this section are **pesewas** (`95000` = GH₵ 950.00).
+MarketiX collects MoMo and card payments in its own Paystack account and credits each vendor's balance **when the buyer confirms delivery** (the "✅ I got my order" button, 4.8), or when an admin releases the order. The vendor then **withdraws** from that balance to their MoMo number (`momoNumber`). All amounts in this section are **pesewas** (`95000` = GH₵ 950.00).
 
 | Order | What it does to the vendor's balance |
 |---|---|
 | MoMo or card, buyer confirmed delivery | `+` items − 10% + the whole delivery fee (e.g. GH₵ 1,000 items + GH₵ 50 delivery → `+95000`) |
 | Cash on delivery, delivered | `−` 10% of the items (MarketiX's commission; the vendor kept the cash) |
-| Payout sent | `−` the amount sent |
-| Payout failed or reversed | `+` the amount back |
+| Withdrawal (payout) sent | `−` the amount sent |
+| Withdrawal failed or reversed | `+` the amount back |
 
-Vendors are paid **every morning at 7:00 am Accra time, Monday to Saturday** (none on Sunday): each shop owed at least GH₵ 1 gets its **whole balance** in one MoMo transfer, so commission owed on cash orders comes off it. Orders confirmed on Saturday after 7 am or on Sunday are paid on Monday. Admins can also pay a shop at once ("Pay now"). MarketiX pays the Paystack fees. The vendor can't change any of this; the endpoints are read-only.
+**Nothing is paid automatically** (the old 7 am daily run is gone). The vendor taps **Withdraw** on the Money screen and picks an amount from `minPayout` up to their `balance`; it is sent in one MoMo transfer. Commission owed on cash orders is already netted into the balance. Rules:
+
+- **Once a day per shop, by calendar day in Accra time** (resets at midnight `Africa/Accra`). A withdrawal that ends `FAILED` or reversed **does not** use up the day: the vendor can withdraw again at once. `PENDING`, `PROCESSING` and `SUCCESS` withdrawals do.
+- Only vendor withdrawals count towards the limit. Admin "Pay now" and "Retry" don't use up the vendor's day, and aren't blocked by it.
+- MarketiX pays the Paystack fees.
+
+**`POST /payouts/withdraw`** `{ "amount": 15000 }` (pesewas, integer). Starts a MoMo transfer to the shop's `momoNumber` and returns the new payout (`201`, shape as in `GET /payouts`, `source: "VENDOR"`). Errors, each with a `message` for the vendor:
+
+| Status | When | Message |
+|---|---|---|
+| `400` | `amount` isn't a whole number of pesewas | "Enter the amount in pesewas, as a whole number." |
+| `400` | Under `minPayout` | "The least you can withdraw is GH₵ 1.00." |
+| `400` | Over the balance | "You can withdraw up to GH₵ 950.00." (or "Nothing to withdraw: your balance is GH₵ 0.00.") |
+| `409` | Already withdrew today | "You can withdraw once a day. Try again tomorrow." |
+| `409` | A payout is `PENDING` or `PROCESSING` | "Wait for your last withdrawal to land before you withdraw again." |
+| `409` | Shop paused by an admin | "Withdrawals for your shop are on hold. MarketiX will contact you." |
+| `409` | Payouts switched off (`PAYOUTS_ENABLED` not `true`) | "Withdrawals aren’t available yet. Your balance is safe." |
+| `409` | No MoMo number | "Add your MoMo number before you withdraw." |
+| `403` | Suspended shop | "Your shop is suspended, so you can’t withdraw. Contact MarketiX support." |
+
+The checks and the new payout run under a per-shop lock, so two taps at once can't both get through. If Paystack's reply to a transfer is unclear (timeout, network error, 5xx), the payout stays `PROCESSING` (counted in `inFlight`, not refunded) because the money may have gone out; it's settled by Paystack's webhook, or checked with Paystack after 10 minutes the next time the shop's money is loaded or paid. Transfer webhooks are confirmed with Paystack's API before any money moves.
 
 **`GET /payouts/summary`**
 
@@ -449,20 +469,21 @@ Vendors are paid **every morning at 7:00 am Accra time, Monday to Saturday** (no
   "totals": { "earned": 190000, "commissionOnPaidOrders": 20000, "commissionOnCashOrders": 3000, "paidOut": 92000 },
   "awaitingConfirmation": { "count": 1, "amount": 47500, "orders": [{ "id": "uuid", "orderNumber": "MX-ABC123", "vendorShare": 47500, "deliveredAt": "…" }] },
   "lastPayout": { "id": "uuid", "amount": 92000, "status": "SUCCESS", "momoNumber": "0244111222", "paidAt": "…", "failureReason": null, "createdAt": "…" },
-  "payouts": { "enabled": true, "paused": false, "pausedReason": null, "schedule": "Every morning at 7:00 am, Monday to Saturday", "nextPayoutAt": "2026-11-05T07:00:00.000Z" },
+  "payouts": { "enabled": true, "paused": false, "pausedReason": null, "nextWithdrawalAt": null },
   "momo": { "number": "0244111222", "name": "Ama Mensah" },
   "commissionPercent": 10, "minPayout": 100
 }
 ```
 
-- `balance` below 0: the vendor owes commission on cash orders ("You owe MarketiX"); it comes off the next payout.
+- `balance` below 0: the vendor owes commission on cash orders ("You owe MarketiX"); it comes off their next earnings. No Withdraw button then.
 - `awaitingConfirmation`: delivered, paid orders the buyer hasn't confirmed yet; they are paid when the buyer taps the button.
-- `payouts.enabled` is false until MarketiX switches payouts on: balances still add up and are paid in full later.
-- Show `payouts.schedule` and `payouts.nextPayoutAt` on the Money screen ("Next payout: Tomorrow, 7:00 am").
+- `payouts.enabled` is false until MarketiX switches payouts on: balances still add up and can be withdrawn later.
+- `payouts.nextWithdrawalAt`: `null` when the vendor may withdraw today; otherwise the next midnight in Accra (ISO), because they already withdrew today. (`schedule` and `nextPayoutAt` are removed.)
+- The Withdraw button is off when paused, payouts are off, there's no MoMo number, `inFlight > 0`, `nextWithdrawalAt` is set, or `balance < minPayout`; the screen says which.
 
 **`GET /payouts/statement?page=1&limit=20`**: the ledger, newest first. Each entry: `{ id, type: "ORDER_EARNING" | "CASH_COMMISSION" | "PAYOUT" | "PAYOUT_REVERSAL", amount, orderNumber, details: { items, commission, deliveryFee } | null, createdAt, payout: { status, reference, failureReason, paidAt } | null }`.
 
-**`GET /payouts?status=all|pending|processing|success|failed&page=&limit=`**: the shop's payouts. `status`: `PENDING` (being sent), `PROCESSING` (Paystack accepted it), `SUCCESS`, `FAILED` (the amount is back in the balance).
+**`GET /payouts?status=all|pending|processing|success|failed&page=&limit=`**: the shop's payouts. `status`: `PENDING` (being sent), `PROCESSING` (Paystack accepted it), `SUCCESS`, `FAILED` (the amount is back in the balance). Each payout has `source`: `VENDOR` (a withdrawal), `ADMIN` (Pay now or Retry) or `AUTOMATIC` (from the old 7 am run).
 
 ## 5. Admin app
 
@@ -860,15 +881,15 @@ Money owed to vendors and the MoMo transfers that pay them (amounts in pesewas; 
 
 | Method and path | Result |
 |---|---|
-| `GET /admin/payouts/summary` | `{ owedToVendors, owedByVendors, failedPayouts, last30Days: { paidOut, commission }, payoutsEnabled, commissionPercent, schedule, nextPayoutAt }`. `failedPayouts` counts shops whose **latest** payout failed. |
+| `GET /admin/payouts/summary` | `{ owedToVendors, owedByVendors, failedPayouts, last30Days: { paidOut, commission }, payoutsEnabled, commissionPercent }`. `failedPayouts` counts shops whose **latest** payout failed. |
 | `GET /admin/payouts/balances?search=&page=&limit=` | Shops with money owed or a payout on record, largest balance first: `{ id, ref, name, momoNumber, payoutsPaused, balance, inFlight, paidOut, lastPayoutFailed, lastPayoutAt }` |
-| `GET /admin/payouts?status=all\|pending\|processing\|success\|failed&search=&page=&limit=` | Every payout, newest first, with `tenant: { id, name, ref }` and `superseded` (a newer payout exists for the shop, so this failure is already dealt with: hide Retry) |
-| `POST /admin/payouts/:id/retry` | Sends the shop's whole balance again now (which includes the failed amount). Failed amounts are also picked up by the next 7 am run. `409` if it isn't failed, or a newer payout exists. |
+| `GET /admin/payouts?status=all\|pending\|processing\|success\|failed&search=&page=&limit=` | Every payout, newest first, with `source`, `tenant: { id, name, ref }` and `superseded` (a newer payout exists for the shop, so this failure is already dealt with: hide Retry) |
+| `POST /admin/payouts/:id/retry` | Sends the shop's whole balance again now (which includes the failed amount). Failed amounts are also picked up by the next 7 am run. `409` if it isn't failed, or a newer payout exists. Otherwise the vendor can simply withdraw again. |
 | `GET /admin/tenants/:id/payouts/summary` | Same shape as the vendor's `GET /payouts/summary` |
 | `GET /admin/tenants/:id/payouts/statement?page=&limit=` | Same shape as the vendor's statement |
 | `POST /admin/tenants/:id/payouts/pay-now` | Sends the balance now. `409` with the reason when it can't: payouts off, paused, one already in progress, balance under GH₵ 1, no MoMo number. |
-| `POST /admin/tenants/:id/payouts/pause` `{ paused, reason? }` | Stops (reason required) or restarts automatic payouts; the balance keeps adding up while paused. |
-| `POST /admin/orders/:id/release` | Credits the vendor for a delivered, Paystack-paid order the buyer never confirmed (paid in the next 7 am run, or with Pay now). `409` for cash orders, undelivered or already released. |
+| `POST /admin/tenants/:id/payouts/pause` `{ paused, reason? }` | Stops (reason required) or restarts the shop's withdrawals; the balance keeps adding up while paused. |
+| `POST /admin/orders/:id/release` | Credits the vendor for a delivered, Paystack-paid order the buyer never confirmed (the vendor can then withdraw it, or an admin can Pay now). `409` for cash orders, undelivered or already released. |
 
 `GET /admin/orders/:id` includes `paystackPaidAt` and `settlement: { type, amount, createdAt } | null` (the order's ledger entry), so the order detail can show "credited to the vendor" or offer **Release to vendor**.
 

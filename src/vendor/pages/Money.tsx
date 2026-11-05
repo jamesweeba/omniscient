@@ -1,10 +1,23 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
+import { Dialog } from '@/components/Dialog/Dialog'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
+import { onDataChanged } from '@/lib/dataEvents'
 import { formatDateTime } from '@/lib/format'
-import { cedis, fetchMyMoney, fetchMyStatement, formatPayoutDay, LEDGER_ENTRY, PAYOUT_STATUS, type LedgerEntry, type ShopMoney } from '@/lib/payouts'
+import {
+  cedis,
+  fetchMyMoney,
+  fetchMyStatement,
+  LEDGER_ENTRY,
+  parseCedis,
+  PAYOUT_STATUS,
+  requestWithdrawal,
+  withdrawState,
+  type LedgerEntry,
+  type ShopMoney,
+} from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import styles from '../vendor.module.css'
 import money from './Money.module.css'
@@ -12,13 +25,15 @@ import { VendorPageHeader } from './VendorPageHeader'
 
 const PAGE_SIZE = 10
 
-/** What MarketiX owes the vendor, what's been sent to their MoMo, and every entry behind it. */
+/** What MarketiX owes the vendor, withdrawing it to their MoMo, and every entry behind it. */
 export function Money() {
   const summary = useAsync(fetchMyMoney)
+  const { reload } = summary
+  useEffect(() => onDataChanged(reload), [reload])
 
   return (
     <>
-      <VendorPageHeader title="Money" lead="What you've earned, what we've sent to your MoMo, and what's on the way." />
+      <VendorPageHeader title="Money" lead="What you've earned, withdrawing it to your MoMo, and what's on the way." />
       {summary.status === 'loading' && <p className={styles.centered}>Loading…</p>}
       {summary.status === 'error' && <p className={styles.alertError}>{summary.error}</p>}
       {summary.status === 'success' && <MoneyContent summary={summary.data} />}
@@ -29,6 +44,9 @@ export function Money() {
 function MoneyContent({ summary }: { summary: ShopMoney }) {
   const { balance, inFlight, totals, awaitingConfirmation, lastPayout } = summary
   const owes = balance < 0
+  const withdraw = withdrawState(summary)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [sent, setSent] = useState<string | null>(null)
 
   return (
     <>
@@ -37,11 +55,22 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
         <span className={owes ? money.balanceOwed : money.balance}>{cedis(Math.abs(balance))}</span>
         <p className={styles.muted}>
           {owes
-            ? `This is our ${summary.commissionPercent}% on your cash orders. It comes off your next MoMo payout.`
-            : balance > 0
-              ? payoutNote(summary)
-              : `Each order is added here once the buyer confirms they got it.`}
+            ? `This is our ${summary.commissionPercent}% on your cash orders. It comes off your balance as buyers confirm new orders.`
+            : `Each order is added here once the buyer confirms they got it. Withdraw it to your MoMo whenever you like, once a day.`}
         </p>
+        {sent && (
+          <p className={styles.alertSuccess} role="status">
+            {sent}
+          </p>
+        )}
+        {!owes && (
+          <>
+            <button className={styles.primary} type="button" disabled={!withdraw.canWithdraw} onClick={() => setWithdrawing(true)}>
+              Withdraw to MoMo
+            </button>
+            {!withdraw.canWithdraw && balance > 0 && <p className={styles.fieldHint}>{withdraw.reason}</p>}
+          </>
+        )}
         {inFlight > 0 && (
           <p className={styles.alertInfo}>
             {cedis(inFlight)} is on its way to your MoMo ({summary.momo.number ? formatPhone(summary.momo.number, 'local') : 'your number'}).
@@ -49,12 +78,24 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
         )}
         {lastPayout?.status === 'FAILED' && (
           <p className={styles.alertWarning}>
-            Your last payout didn’t go through. We’re looking into it; the money is safe in your balance.
+            Your last withdrawal didn’t go through{lastPayout.failureReason ? `: ${lastPayout.failureReason}` : ''}. The money is back in your
+            balance, and you can withdraw it again.
           </p>
         )}
       </section>
 
-      <PayoutSchedule summary={summary} />
+      {withdrawing && (
+        <WithdrawDialog
+          summary={summary}
+          onClose={() => setWithdrawing(false)}
+          onSent={(amount) => {
+            setWithdrawing(false)
+            setSent(`${cedis(amount)} is on its way to your MoMo. It usually lands within a few minutes.`)
+          }}
+        />
+      )}
+
+      <WithdrawRules summary={summary} />
 
       {awaitingConfirmation.count > 0 && (
         <section className={styles.card} aria-labelledby="waiting">
@@ -99,18 +140,88 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
   )
 }
 
-function payoutNote(summary: ShopMoney): string {
-  if (summary.payouts.paused) return 'Payouts to your shop are on hold. MarketiX will contact you.'
-  if (!summary.payouts.enabled) return 'MoMo payouts start soon. Your balance is safe and will be sent in full.'
-  if (summary.balance < summary.minPayout) return `We send it once it reaches ${cedis(summary.minPayout)}.`
-  return `Sent to ${summary.momo.number ? formatPhone(summary.momo.number, 'local') : 'your MoMo'} at the next payout: ${formatPayoutDay(summary.payouts.nextPayoutAt)}.`
+/** Ask for part or all of the balance to be sent to the vendor's MoMo. */
+function WithdrawDialog({ summary, onClose, onSent }: { summary: ShopMoney; onClose: () => void; onSent: (amount: number) => void }) {
+  const { balance, minPayout, momo } = summary
+  const [text, setText] = useState((balance / 100).toFixed(2))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const amount = parseCedis(text)
+  const invalid =
+    amount === null
+      ? 'Enter an amount, like 150 or 150.50.'
+      : amount < minPayout
+        ? `The least you can withdraw is ${cedis(minPayout)}.`
+        : amount > balance
+          ? `You can withdraw up to ${cedis(balance)}.`
+          : null
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (invalid || amount === null) return
+    setBusy(true)
+    setError(null)
+    try {
+      await requestWithdrawal(amount) // the page reloads through onDataChanged
+      onSent(amount)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog
+      title="Withdraw to MoMo"
+      description={`You can withdraw once a day. Available: ${cedis(balance)}.`}
+      onClose={() => !busy && onClose()}
+    >
+      <form className={money.withdrawForm} onSubmit={submit} noValidate>
+        <label className={styles.field}>
+          Amount (GH₵)
+          <input
+            className={text && invalid ? styles.inputInvalid : styles.input}
+            inputMode="decimal"
+            autoComplete="off"
+            value={text}
+            disabled={busy}
+            autoFocus
+            aria-invalid={Boolean(text && invalid)}
+            onChange={(e) => setText(e.target.value)}
+          />
+          {text && invalid ? (
+            <span className={styles.fieldError}>{invalid}</span>
+          ) : (
+            <span className={styles.fieldHint}>
+              Sent to {momo.number ? formatPhone(momo.number, 'local') : 'your MoMo'}
+              {momo.name ? ` (${momo.name})` : ''}. MarketiX pays the transfer fee.
+            </span>
+          )}
+        </label>
+        {amount !== balance && (
+          <button className={styles.textButton} type="button" disabled={busy} onClick={() => setText((balance / 100).toFixed(2))}>
+            Withdraw all {cedis(balance)}
+          </button>
+        )}
+        {error && (
+          <p className={styles.alertError} role="alert">
+            {error}
+          </p>
+        )}
+        <button className={styles.primary} type="submit" disabled={busy || invalid !== null}>
+          {busy ? 'Sending…' : amount !== null && !invalid ? `Withdraw ${cedis(amount)}` : 'Withdraw'}
+        </button>
+      </form>
+    </Dialog>
+  )
 }
 
-/** When vendors are paid, and when the next payout is. */
-function PayoutSchedule({ summary }: { summary: ShopMoney }) {
-  const { payouts, momo } = summary
+/** How withdrawals work. */
+function WithdrawRules({ summary }: { summary: ShopMoney }) {
+  const { payouts, momo, minPayout } = summary
   return (
-    <section className={`${styles.card} ${money.schedule}`} aria-labelledby="schedule">
+    <section className={`${styles.card} ${money.schedule}`} aria-labelledby="withdraw-rules">
       <span className={money.scheduleIcon} aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <circle cx="12" cy="12" r="9" />
@@ -118,13 +229,14 @@ function PayoutSchedule({ summary }: { summary: ShopMoney }) {
         </svg>
       </span>
       <div className={money.scheduleText}>
-        <h2 id="schedule" className={money.scheduleTitle}>
-          {payouts.paused ? 'Payouts on hold' : payouts.enabled ? `Next payout: ${formatPayoutDay(payouts.nextPayoutAt)}` : 'MoMo payouts start soon'}
+        <h2 id="withdraw-rules" className={money.scheduleTitle}>
+          {payouts.paused ? 'Withdrawals on hold' : payouts.enabled ? 'One withdrawal a day' : 'Withdrawals start soon'}
         </h2>
         <p className={styles.muted}>
-          {payouts.schedule} (no payouts on Sunday). We send everything you’re owed to your MoMo
-          {momo.number ? ` (${formatPhone(momo.number, 'local')})` : ''}, for orders buyers have confirmed. Orders confirmed on
-          Saturday after 7 am or on Sunday are paid on Monday morning.
+          Withdraw any amount from {cedis(minPayout)} up to your balance to your MoMo
+          {momo.number ? ` (${formatPhone(momo.number, 'local')})` : ''}, once a day. A new day starts at midnight. If a withdrawal
+          doesn’t go through, the money comes back to your balance and you can try again the same day. Nothing is sent until you
+          withdraw.
         </p>
       </div>
     </section>

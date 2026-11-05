@@ -138,7 +138,7 @@ function VendorPayoutFact({ order, onReleased }: { order: Order; onReleased: () 
     return <Fact label="Vendor payout">{cedis(settlement.amount)} credited to the vendor, {formatDateTime(settlement.createdAt)}</Fact>
   }
   if (settlement?.type === 'CASH_COMMISSION') {
-    return <Fact label="Commission">{cedis(-settlement.amount)} owed by the vendor (cash order), taken off their next payout</Fact>
+    return <Fact label="Commission">{cedis(-settlement.amount)} owed by the vendor (cash order), taken off their balance</Fact>
   }
   if (order.paymentMethod === 'COD' || !order.paystackPaidAt) return null
   if (!delivered) return <Fact label="Vendor payout">Paid by the buyer; the vendor is paid once the buyer confirms delivery</Fact>

@@ -11,10 +11,10 @@ import { formatDateTime } from '@/lib/format'
 import {
   cedis,
   fetchAllPayouts,
-  formatPayoutDay,
   fetchPayoutsOverview,
   fetchVendorBalances,
   PAYOUT_STATUS,
+  payoutSourceLabel,
   retryPayout,
   type AdminPayout,
   type PayoutStatusFilter,
@@ -61,8 +61,8 @@ export function Payouts() {
           <h1 className={page.title}>Payouts</h1>
           <p className={page.subtitle}>
             Orders count once the buyer confirms delivery
-            {summary ? `, less MarketiX’s ${summary.commissionPercent}% of the items` : ''}. Vendors are paid to their MoMo every morning at
-            7:00 am, Monday to Saturday{summary?.payoutsEnabled ? ` (next: ${formatPayoutDay(summary.nextPayoutAt)})` : ''}.
+            {summary ? `, less MarketiX’s ${summary.commissionPercent}% of the items` : ''}. Vendors withdraw their balance to MoMo themselves, once a
+            day (Accra time).
           </p>
         </div>
         <div className={page.toolbar}>
@@ -79,7 +79,7 @@ export function Payouts() {
 
       {summary && (
         <StatGrid label="Payout totals">
-          <StatCard label="Owed to vendors" value={cedis(summary.owedToVendors)} note="Waiting to be sent" />
+          <StatCard label="Owed to vendors" value={cedis(summary.owedToVendors)} note="Not withdrawn yet" />
           <StatCard label="Paid out" value={cedis(summary.last30Days.paidOut)} note="Last 30 days" />
           <StatCard label="MarketiX commission" value={cedis(summary.last30Days.commission)} note={`${summary.commissionPercent}% of items, last 30 days`} />
           <StatCard
@@ -274,7 +274,7 @@ function PayoutRow({ payout }: { payout: AdminPayout }) {
       <td className={table.nowrap}>
         <div className={table.stack}>
           <span>{formatDateTime(payout.createdAt)}</span>
-          <span className={table.secondary}>{payout.initiatedById ? 'Sent by an admin' : 'Automatic'}</span>
+          <span className={table.secondary}>{payoutSourceLabel(payout)}</span>
         </div>
       </td>
       <td>

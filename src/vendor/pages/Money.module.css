@@ -138,3 +138,9 @@
   font-size: 17px;
   font-weight: 700;
 }
+
+.withdrawForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
