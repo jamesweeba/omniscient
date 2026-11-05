@@ -78,8 +78,8 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
         )}
         {lastPayout?.status === 'FAILED' && (
           <p className={styles.alertWarning}>
-            Your last withdrawal didn’t go through{lastPayout.failureReason ? `: ${lastPayout.failureReason}` : ''}. The money is back in your
-            balance, and you can withdraw it again.
+            Your last withdrawal didn’t go through. The money is back in your balance and MarketiX has been told. You can withdraw it
+            again.
           </p>
         )}
       </section>
@@ -278,9 +278,7 @@ function EntryRow({ entry }: { entry: LedgerEntry }) {
       ? `Items ${cedis(d.items)} − ${cedis(d.commission)} commission + ${cedis(d.deliveryFee)} delivery`
       : entry.type === 'CASH_COMMISSION' && d
         ? `${cedis(d.commission)} on ${cedis(d.items)} of items paid in cash`
-        : entry.type === 'PAYOUT_REVERSAL' && entry.payout?.failureReason
-          ? entry.payout.failureReason
-          : null
+        : null
 
   return (
     <li className={money.entry}>
