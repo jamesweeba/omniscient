@@ -1,0 +1,472 @@
+/* Phone: hero on top, form card overlapping it. Desktop: side by side. */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+}
+
+/* Hero */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background: var(--color-brand-dark);
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 85% 18%, rgb(47 160 92 / 0.55), transparent 42%),
+    radial-gradient(circle at 10% 70%, rgb(242 179 61 / 0.22), transparent 40%),
+    radial-gradient(circle at 70% 95%, rgb(217 68 43 / 0.18), transparent 38%);
+  animation: drift 14s ease-in-out infinite alternate;
+}
+
+.heroInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px 24px 56px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.logoMark {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 17px;
+  font-weight: 700;
+  background: var(--color-accent);
+  box-shadow: 0 6px 18px rgb(47 160 92 / 0.45);
+}
+
+.pitch {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.headline {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.highlight {
+  position: relative;
+  white-space: nowrap;
+  color: #7ee2a2;
+}
+
+.highlight::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0.02em;
+  left: 0;
+  height: 0.14em;
+  border-radius: 999px;
+  background: var(--color-highlight);
+  transform-origin: left;
+  animation: underline 900ms 300ms cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+
+.tagline {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--color-brand-muted);
+}
+
+.benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.benefits li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e4f1e8;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+
+.benefitIcon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--color-brand-dark);
+  background: #7ee2a2;
+}
+
+/* Form */
+
+.panel {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  margin-top: -32px;
+  background: var(--color-surface);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -12px 30px rgb(15 42 26 / 0.12);
+}
+
+.form {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 24px 40px;
+}
+
+.formHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.formLead {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+.tabs {
+  position: relative;
+  display: flex;
+  padding: 4px;
+  background: var(--color-neutral-bg);
+  border-radius: 12px;
+}
+
+.tabIndicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 9px;
+  background: var(--color-text);
+  box-shadow: 0 4px 12px rgb(26 29 31 / 0.25);
+  transition: transform 300ms cubic-bezier(0.3, 0.9, 0.3, 1.1);
+}
+
+.tabs[data-mode='login'] .tabIndicator {
+  transform: translateX(100%);
+}
+
+.tab {
+  position: relative;
+  flex: 1;
+  height: 42px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 200ms;
+}
+
+.tabActive {
+  composes: tab;
+  color: #fff;
+}
+
+.names {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input {
+  height: 50px;
+  min-width: 0;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-input-border);
+  border-radius: 12px;
+  transition:
+    border-color 150ms,
+    background 150ms,
+    box-shadow 150ms;
+}
+
+.input:focus {
+  outline: none;
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgb(30 122 69 / 0.14);
+}
+
+.inputInvalid {
+  composes: input;
+  border-color: var(--color-danger);
+}
+
+.reveal {
+  position: absolute;
+  top: 30px;
+  right: 6px;
+  height: 38px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.reveal:hover {
+  background: var(--color-success-bg);
+}
+
+.fieldError {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-danger);
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-radius: 10px;
+  animation: shake 350ms ease;
+}
+
+.submit {
+  position: relative;
+  overflow: hidden;
+  height: 54px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #2fa05c, #1e7a45 55%, #155c33);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgb(30 122 69 / 0.35);
+  cursor: pointer;
+  transition:
+    transform 150ms,
+    box-shadow 150ms;
+}
+
+.submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.25) 50%, transparent 70%);
+  transform: translateX(-100%);
+}
+
+.submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgb(30 122 69 / 0.4);
+}
+
+.submit:hover:not(:disabled)::after {
+  transform: translateX(100%);
+  transition: transform 700ms ease;
+}
+
+.submit:hover:not(:disabled) .arrow {
+  transform: translateX(3px);
+}
+
+.submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.arrow {
+  transition: transform 150ms;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgb(255 255 255 / 0.35);
+  border-top-color: #fff;
+  border-radius: 999px;
+  animation: spin 700ms linear infinite;
+}
+
+.help {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* Phones: returning vendors logging in go straight to the form. */
+@media (max-width: 899px) {
+  .page[data-mode='login'] .showcase,
+  .page[data-mode='login'] .benefits {
+    display: none;
+  }
+
+  .page[data-mode='login'] .heroInner {
+    padding-bottom: 56px;
+  }
+}
+
+/* Desktop: hero left, form right */
+
+@media (min-width: 900px) {
+  .page {
+    flex-direction: row;
+  }
+
+  .hero {
+    flex: 1.1;
+    display: flex;
+    align-items: center;
+  }
+
+  .heroInner {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    gap: 32px;
+    padding: 56px 48px;
+  }
+
+  .headline {
+    font-size: 48px;
+  }
+
+  .tagline {
+    font-size: 18px;
+  }
+
+  .panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    margin-top: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+@keyframes drift {
+  to {
+    transform: translate3d(-4%, 3%, 0) scale(1.08);
+  }
+}
+
+@keyframes underline {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shake {
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow,
+  .highlight::after,
+  .error,
+  .spinner {
+    animation: none;
+  }
+
+  .tabIndicator,
+  .submit,
+  .submit::after,
+  .arrow {
+    transition: none;
+  }
+}

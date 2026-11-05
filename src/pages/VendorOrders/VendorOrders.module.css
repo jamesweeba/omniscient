@@ -1,0 +1,375 @@
+.backLink {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.message {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.muted {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.subtle {
+  color: var(--color-text-muted);
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+/* Products card */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.cardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.compactTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.compactTable th {
+  padding: 6px 12px 6px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.compactTable td {
+  padding: 9px 12px 9px 0;
+  border-top: 1px solid var(--color-divider);
+}
+
+.compactTable th:last-child,
+.compactTable td:last-child {
+  padding-right: 0;
+}
+
+.compactTable .alignRight {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.compactTable tfoot td {
+  color: var(--color-text-muted);
+}
+
+.compactTable .totalRow td {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.textButton {
+  align-self: flex-start;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.textButton:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Orders section */
+
+.ordersHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.chip {
+  height: 32px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-input-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--color-text-muted);
+}
+
+.chipActive {
+  composes: chip;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-text);
+  border-color: var(--color-text);
+}
+
+.rowOpen td {
+  background: var(--color-surface-muted);
+}
+
+.expandButton {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-input-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.expandButton:hover {
+  border-color: var(--color-text-muted);
+}
+
+.chevron,
+.chevronOpen {
+  transition: transform 150ms;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Order detail (expanded row) */
+
+.detailRow > td {
+  padding: 0 !important;
+  background: var(--color-surface-muted);
+  border-top: 0 !important;
+}
+
+.detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 24px 32px;
+  margin: 0 20px 20px;
+  padding: 20px 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.detailItems {
+  grid-column: 1;
+}
+
+.detailSide {
+  grid-column: 2;
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detailTimeline {
+  grid-column: 1;
+}
+
+.detailTitle {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 13px;
+}
+
+.fact dt {
+  color: var(--color-text-muted);
+}
+
+.fact dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 10px;
+}
+
+.timelineNote {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 999px;
+}
+
+.dot_info {
+  composes: dot;
+  background: var(--color-info-fg);
+}
+
+.dot_neutral {
+  composes: dot;
+  background: var(--color-text-disabled);
+}
+
+.dot_warning {
+  composes: dot;
+  background: var(--color-highlight);
+}
+
+.dot_success {
+  composes: dot;
+  background: var(--color-primary);
+}
+
+.dot_danger {
+  composes: dot;
+  background: var(--color-danger);
+}
+
+@media (max-width: 900px) {
+  .detail {
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0 12px 12px;
+    padding: 16px;
+  }
+
+  .detailItems,
+  .detailSide,
+  .detailTimeline {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  /* Keep the detail readable inside the horizontally scrolling table. */
+  .detail {
+    position: sticky;
+    left: 12px;
+    width: min(640px, calc(100vw - 56px));
+  }
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 18px 16px;
+  }
+
+  .fact {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.inlineButton {
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.inlineButton:disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.inlineError {
+  color: var(--color-danger);
+}

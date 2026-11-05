@@ -1,0 +1,125 @@
+/* Shared styles for data tables in a card (review queue, vendors). */
+
+.panel {
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.scroll {
+  position: relative; /* keeps .visuallyHidden headers inside the scroll area */
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table > thead > tr > th {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+}
+
+.table > tbody > tr > td {
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.table > thead > tr > th:first-child,
+.table > tbody > tr > td:first-child {
+  padding-left: 20px;
+}
+
+.table > thead > tr > th:last-child,
+.table > tbody > tr > td:last-child {
+  padding-right: 20px;
+}
+
+.loading {
+  opacity: 0.55;
+  transition: opacity 150ms;
+}
+
+.emptyCell {
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.primary {
+  font-weight: 600;
+}
+
+.secondary {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.warning {
+  color: var(--color-warning);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.actionCell {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.rowButton {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #fff;
+  background: var(--color-primary);
+}
+
+.rowButton:hover {
+  color: #fff;
+  background: var(--color-primary-hover);
+}
+
+.rowButtonSecondary {
+  composes: rowButton;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-input-border);
+}
+
+.rowButtonSecondary:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

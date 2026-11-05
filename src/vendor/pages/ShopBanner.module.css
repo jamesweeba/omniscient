@@ -1,0 +1,102 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+/* The order form shows banners as a square cropped from the centre; the preview matches. */
+.frame,
+.empty {
+  width: 160px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--color-neutral-bg);
+  border-radius: 10px;
+}
+
+.frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-input-border);
+}
+
+.caption {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.statusLive,
+.statusPending {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.statusLive {
+  color: var(--color-success-fg);
+  background: var(--color-success-bg);
+}
+
+.statusPending {
+  color: var(--color-warning-fg);
+  background: var(--color-warning-bg);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.fileButton {
+  position: relative;
+  width: fit-content;
+}
+
+.fileButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.fileButton:has(input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.fileButton:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  background: var(--color-danger-bg);
+  border-radius: 10px;
+}

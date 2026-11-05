@@ -1,0 +1,454 @@
+/* Shared styles for the vendor app (phone-first). */
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #fff;
+  background: var(--color-brand-dark);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: #fff;
+}
+
+.logoMark {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--color-accent);
+}
+
+.logoMarkLarge {
+  composes: logoMark;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  font-size: 17px;
+}
+
+.logout {
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-brand-text);
+  background: none;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.logout:hover {
+  color: #fff;
+  border-color: rgb(255 255 255 / 0.5);
+}
+
+.main {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 16px 48px;
+}
+
+/* Section nav under the top bar */
+
+.nav {
+  position: sticky;
+  top: 60px;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.navLink {
+  flex: 0 1 120px;
+  padding: 12px 4px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+
+.navLinkActive {
+  composes: navLink;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* Page heading */
+
+.backLink {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.lead {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* Cards */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.muted {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+/* Forms (16px text so phones don't zoom in) */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fieldHint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.input,
+.select,
+.textarea {
+  height: 48px;
+  min-width: 0;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-input-border);
+  border-radius: 10px;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+}
+
+.inputInvalid {
+  composes: input;
+  border-color: var(--color-danger);
+}
+
+.fieldError {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-danger);
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fieldset {
+  /* Fieldsets default to their content's min width, which pushes inputs out of the card. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.fieldset + .fieldset {
+  padding-top: 20px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 15px;
+  border: 1px solid var(--color-input-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  cursor: pointer;
+  user-select: none;
+}
+
+.choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.choice:has(input:checked) {
+  color: var(--color-success-fg);
+  background: var(--color-success-bg);
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.choice:has(input:disabled) {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Buttons (large tap targets) */
+
+.button {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.primary {
+  composes: button;
+  color: #fff;
+  background: var(--color-primary);
+  border: 0;
+}
+
+.primary:hover:not(:disabled) {
+  color: #fff;
+  background: var(--color-primary-hover);
+}
+
+.secondary {
+  composes: button;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-input-border);
+}
+
+.secondary:hover:not(:disabled) {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.small {
+  height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.textButton {
+  align-self: flex-start;
+  padding: 0;
+  text-decoration: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.dangerText {
+  composes: textButton;
+  color: var(--color-danger);
+}
+
+/* Messages */
+
+.alert {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+.alertError {
+  composes: alert;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.alertWarning {
+  composes: alert;
+  color: var(--color-warning-fg);
+  background: var(--color-warning-bg);
+}
+
+.alertSuccess {
+  composes: alert;
+  color: var(--color-success-fg);
+  background: var(--color-success-bg);
+}
+
+.alertInfo {
+  composes: alert;
+  color: var(--color-info-fg);
+  background: var(--color-info-bg);
+}
+
+.centered {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 380px) {
+  .row2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.visuallyHiddenInline {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.textarea {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* An input with a button beside it. */
+.inline {
+  display: flex;
+  gap: 8px;
+}
+
+.inline > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline > button {
+  height: auto;
+}

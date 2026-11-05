@@ -1,0 +1,71 @@
+.control {
+  position: relative;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-input-border);
+  border-radius: 8px;
+}
+
+.control:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+.label,
+.icon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.searchInput,
+.select {
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.searchInput {
+  width: 220px;
+  min-width: 0;
+}
+
+.select {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .control {
+    flex: 1 1 100%;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+}
+
+.dateInput {
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}

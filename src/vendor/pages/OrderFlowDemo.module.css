@@ -1,0 +1,732 @@
+.demo {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  /* Room for the notification to sit just under the phone, clear of the delivery road. */
+  padding-bottom: 52px;
+}
+
+/* Fixed height so the page never moves while the demo plays. */
+.phone {
+  position: relative;
+  height: 392px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #e9e2d6;
+  box-shadow:
+    0 24px 60px rgb(0 0 0 / 0.35),
+    0 0 0 1px rgb(255 255 255 / 0.08);
+  transform: rotate(-2deg);
+}
+
+/* Chat behind the Flow */
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: #fff;
+  background: #155c33;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #155c33;
+  background: #f2b33d;
+}
+
+.chatTitle {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.chatTitle span {
+  font-size: 11px;
+  color: #b9dfc8;
+}
+
+/* Newest messages sit at the bottom (older ones scroll off the top), like WhatsApp. */
+.chat {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 12px;
+  background-image: radial-gradient(rgb(0 0 0 / 0.035) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+
+.shopMessage {
+  align-self: flex-start;
+  max-width: 86%;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 10px;
+  border-top-left-radius: 2px;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.08);
+}
+
+.shopMessage p {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: #1a1d1f;
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0a7cff;
+  border-top: 1px solid #eef0ec;
+  transition: background 150ms;
+}
+
+.ctaPressed {
+  composes: cta;
+  background: #e6f0ff;
+}
+
+/* From the shop, so on the left like the invite. */
+.confirmation {
+  align-self: flex-start;
+  max-width: 84%;
+  margin: 0;
+  padding: 7px 10px 8px;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: #1a1d1f;
+  background: #fff;
+  border-radius: 10px;
+  border-top-left-radius: 2px;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.08);
+  animation: pop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+/* The Flow sheet */
+
+.sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 86%;
+  display: flex;
+  flex-direction: column;
+  color: #1a1d1f;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 0.2);
+  transform: translateY(105%);
+  transition: transform 420ms cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+
+.sheetOpen {
+  composes: sheet;
+  transform: translateY(0);
+}
+
+.sheetHeader {
+  display: grid;
+  grid-template-columns: 24px 1fr 24px;
+  align-items: center;
+  padding: 12px 14px;
+  font-size: 14px;
+  text-align: center;
+  border-bottom: 1px solid #eef0ec;
+}
+
+.close {
+  font-size: 14px;
+  color: #5b6166;
+  text-align: left;
+}
+
+.stepCount {
+  font-size: 11px;
+  color: #9aa0a6;
+  text-align: right;
+}
+
+.viewport {
+  flex: 1;
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  height: 100%;
+  transition: transform 380ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.screen {
+  flex: 0 0 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+/* Screen 1: products */
+
+.productRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f2ef;
+}
+
+.productThumb {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: radial-gradient(circle at 40% 40%, #ef5a3c, #c2371f);
+}
+
+.productThumb[data-product='Onions'] {
+  background: radial-gradient(circle at 40% 40%, #d9a3c4, #9c4f7c);
+}
+
+.productThumb[data-product='Pepper'] {
+  background: radial-gradient(circle at 40% 40%, #7fbf4a, #3f7d1f);
+}
+
+.productText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.productText span {
+  font-size: 12px;
+  color: #5b6166;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  font-size: 13px;
+  color: #5b6166;
+  border: 1px solid #d5d9d4;
+  border-radius: 999px;
+  transition:
+    border-color 200ms,
+    background 200ms;
+}
+
+.stepper b {
+  min-width: 10px;
+  text-align: center;
+  animation: tick 260ms ease both;
+}
+
+.stepperActive {
+  composes: stepper;
+  color: #155c33;
+  background: #e6f4ec;
+  border-color: #1e7a45;
+}
+
+/* Screen 2: delivery */
+
+.label {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5b6166;
+}
+
+.select {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid #d5d9d4;
+  border-radius: 8px;
+}
+
+.select span {
+  color: #9aa0a6;
+}
+
+.radio,
+.radioOn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.radio::before,
+.radioOn::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 2px solid #9aa0a6;
+  border-radius: 999px;
+  box-sizing: border-box;
+}
+
+.radioOn::before {
+  border: 4px solid #1e7a45;
+}
+
+.feeNote {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #5b6166;
+}
+
+/* Screen 3: review and pay */
+
+.summaryRow,
+.summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.summaryRow {
+  color: #5b6166;
+}
+
+.summaryTotal {
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 700;
+  border-top: 1px solid #eef0ec;
+}
+
+.momo {
+  margin-top: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a4a00;
+  background: #fff4d6;
+  border-radius: 8px;
+}
+
+/* Flow footer */
+
+.sheetFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid #eef0ec;
+}
+
+.flowButton {
+  display: block;
+  padding: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+  background: #1e7a45;
+  border-radius: 999px;
+  transition:
+    transform 120ms,
+    background 120ms;
+}
+
+.flowButtonPressed {
+  composes: flowButton;
+  background: #155c33;
+  transform: scale(0.97);
+}
+
+.flowButtonPaid {
+  composes: flowButton;
+  background: #2fa05c;
+  animation: paid 400ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+/* Delivery tracker */
+
+.tracker {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  color: #1a1d1f;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.08);
+  animation: pop 300ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+.trackerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12.5px;
+}
+
+.trackerHeader span {
+  font-size: 11.5px;
+  color: #5b6166;
+}
+
+.road {
+  position: relative;
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 2px 4px;
+  background: linear-gradient(transparent 70%, #eef0ec 70%);
+  border-radius: 8px;
+}
+
+.pin {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.pinShop {
+  composes: pin;
+  color: #fff;
+  background: #1e7a45;
+}
+
+.pinHome {
+  composes: pin;
+  color: #7a4a00;
+  background: #fff4d6;
+  border: 1px solid #f2b33d;
+}
+
+.deliveredBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #1e7a45;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  animation: badge 450ms cubic-bezier(0.2, 0.9, 0.3, 1.6) both;
+}
+
+/* The stretch of road between the two pins. */
+.lane {
+  position: absolute;
+  right: 34px;
+  bottom: 4px;
+  left: 34px;
+  height: 30px;
+}
+
+.route {
+  position: absolute;
+  right: 0;
+  bottom: 3px;
+  left: 0;
+  height: 3px;
+  background-image: linear-gradient(90deg, #c9ccc6 50%, transparent 50%);
+  background-size: 8px 3px;
+  border-radius: 999px;
+}
+
+.routeFill {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: #2fa05c;
+  border-radius: 999px;
+}
+
+.car {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  width: 46px;
+}
+
+.carSvg {
+  display: block;
+  overflow: visible;
+}
+
+.dust {
+  position: absolute;
+  bottom: 2px;
+  left: -10px;
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+}
+
+.dust i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #c9b79c;
+}
+
+/* Driving: the car moves along the lane, wheels turn, body bounces, dust puffs. */
+.trackerDriving .car {
+  animation: drive 3000ms cubic-bezier(0.45, 0, 0.35, 1) forwards;
+}
+
+.trackerDriving .routeFill {
+  animation: fill 3000ms cubic-bezier(0.45, 0, 0.35, 1) forwards;
+}
+
+.trackerDriving .wheel {
+  animation: spin 400ms linear infinite;
+}
+
+.trackerDriving .carBody {
+  animation: bounce 260ms ease-in-out infinite alternate;
+}
+
+.trackerDriving .dust {
+  opacity: 1;
+}
+
+.trackerDriving .dust i {
+  animation: puff 600ms ease-out infinite;
+}
+
+.trackerDriving .dust i:nth-child(2) {
+  animation-delay: 200ms;
+}
+
+.trackerDriving .dust i:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+/* Arrived: parked at the buyer's door. */
+.trackerArrived .car {
+  left: calc(100% - 46px);
+}
+
+.trackerArrived .routeFill {
+  width: 100%;
+}
+
+.managed {
+  font-size: 10.5px;
+  text-align: center;
+  color: #9aa0a6;
+}
+
+/* "New order" notification */
+
+.toast {
+  position: absolute;
+  right: -6px;
+  bottom: 0;
+  left: 18px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: #1a1d1f;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
+  opacity: 0;
+  transform: translateY(14px) scale(0.96);
+  transition:
+    opacity 300ms ease,
+    transform 400ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.toastShown {
+  composes: toast;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.toastIcon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #2fa05c, #1e7a45);
+}
+
+.toastShown .toastIcon {
+  animation: ping 900ms ease-out 1;
+}
+
+.toastText {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.toastText strong {
+  font-size: 14px;
+}
+
+.toastText span {
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 899px) {
+  .phone {
+    height: 348px;
+  }
+
+  .sheet {
+    height: 90%;
+  }
+
+  .screen {
+    gap: 6px;
+    padding: 8px 14px;
+  }
+
+  .productRow {
+    padding: 4px 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+
+@keyframes drive {
+  to {
+    left: calc(100% - 46px);
+  }
+}
+
+@keyframes fill {
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounce {
+  to {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes puff {
+  from {
+    opacity: 0.8;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-8px) scale(1.8);
+  }
+}
+
+@keyframes badge {
+  from {
+    transform: scale(0);
+  }
+}
+
+@keyframes paid {
+  from {
+    transform: scale(0.92);
+  }
+}
+
+@keyframes tick {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes ping {
+  0% {
+    box-shadow: 0 0 0 0 rgb(47 160 92 / 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgb(47 160 92 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .track,
+  .toast,
+  .flowButton,
+  .stepper {
+    transition: none;
+  }
+
+  .confirmation,
+  .stepper b,
+  .toastShown .toastIcon,
+  .tracker,
+  .deliveredBadge,
+  .flowButtonPaid,
+  .trackerDriving .car,
+  .trackerDriving .routeFill,
+  .trackerDriving .wheel,
+  .trackerDriving .carBody,
+  .trackerDriving .dust i {
+    animation: none;
+  }
+}
