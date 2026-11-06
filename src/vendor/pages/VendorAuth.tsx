@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { LogoMark } from '@/components/LogoMark/LogoMark'
 import { useAuth } from '@/context/auth-context'
 import { useAction } from '@/hooks/useAction'
@@ -12,6 +12,7 @@ type Mode = 'signup' | 'login'
 
 const MIN_PASSWORD = 8
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const YEAR = new Date().getFullYear()
 
 type Field = 'firstName' | 'lastName' | 'email' | 'password'
 
@@ -19,7 +20,6 @@ type Field = 'firstName' | 'lastName' | 'email' | 'password'
 export function VendorAuth({ mode }: { mode: Mode }) {
   usePageTitle(mode === 'signup' ? 'Sign up' : 'Log in')
   const { session, login, signup } = useAuth()
-  const navigate = useNavigate()
   const from = (useLocation().state as { from?: string } | null)?.from
 
   const [values, setValues] = useState<Record<Field, string>>({ firstName: '', lastName: '', email: '', password: '' })
@@ -60,86 +60,48 @@ export function VendorAuth({ mode }: { mode: Mode }) {
     )
   }
 
+  const switchTo = isSignup
+    ? { prompt: 'Already selling with us?', label: 'Log in', to: '/vendor/login' }
+    : { prompt: 'New to MarketiX?', label: 'Open a shop', to: '/vendor/signup' }
+
   return (
     <div className={styles.page} data-mode={mode}>
-      <section className={styles.hero}>
-        <div className={styles.glow} aria-hidden="true" />
-        <div className={styles.heroInner}>
-          <div className={styles.brand}>
-            <LogoMark large glow />
-            MarketiX
-          </div>
-
-          <div className={styles.pitch}>
-            <h1 className={styles.headline}>
-              Sell your goods on <span className={styles.highlight}>WhatsApp</span>
-            </h1>
-            <p className={styles.tagline}>
-              Buyers order from you on WhatsApp. You get a number and we handle the rest.
-            </p>
-          </div>
-
-          <div className={styles.showcase}>
-            <OrderFlowDemo />
-          </div>
-
-          <ul className={styles.benefits}>
-            <li>
-              <BenefitIcon path="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />
-              Your own WhatsApp number
-            </li>
-            <li>
-              <BenefitIcon path="M4 5h16v11H8l-4 4zM8 10h8M8 13h5" />
-              Buyers order with a WhatsApp form
-            </li>
-            <li>
-              <BenefitIcon path="M3 7h18v10H3zM3 11h18M7 15h3" />
-              Paid to your MoMo
-            </li>
-          </ul>
+      <main className={styles.panel}>
+        <div className={styles.brand}>
+          <LogoMark />
+          MarketiX
         </div>
-      </section>
 
-      <section className={styles.panel}>
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          <div className={styles.formHeading}>
-            <h2 className={styles.formTitle}>{isSignup ? 'Open your shop' : 'Welcome back'}</h2>
-            <p className={styles.formLead}>
-              {isSignup ? 'Set up your shop in three short steps.' : 'Log in to manage your shop and orders.'}
-            </p>
-          </div>
-
-          <div className={styles.tabs} data-mode={mode} role="tablist" aria-label="Sign up or log in">
-            <span className={styles.tabIndicator} aria-hidden="true" />
-            {(['signup', 'login'] as const).map((tab) => (
-              <button
-                key={tab}
-                className={tab === mode ? styles.tabActive : styles.tab}
-                type="button"
-                role="tab"
-                aria-selected={tab === mode}
+          <header className={styles.formHeading}>
+            <h1 className={styles.formTitle}>{isSignup ? 'Open your shop' : 'Log in to your shop'}</h1>
+            <p className={styles.switch}>
+              {switchTo.prompt}{' '}
+              <Link
+                to={switchTo.to}
+                replace
+                state={{ from }}
                 onClick={() => {
                   setError(null)
                   setFieldErrors({})
-                  navigate(tab === 'signup' ? '/vendor/signup' : '/vendor/login', { replace: true, state: { from } })
                 }}
               >
-                {tab === 'signup' ? 'Sign up' : 'Log in'}
-              </button>
-            ))}
-          </div>
+                {switchTo.label}
+              </Link>
+            </p>
+          </header>
 
           {isSignup && (
             <div className={styles.names}>
-              <TextField label="First name" placeholder="Ama" autoComplete="given-name" value={values.firstName} error={fieldErrors.firstName} onChange={set('firstName')} />
-              <TextField label="Last name" placeholder="Mensah" autoComplete="family-name" value={values.lastName} error={fieldErrors.lastName} onChange={set('lastName')} />
+              <TextField label="First name" autoComplete="given-name" value={values.firstName} error={fieldErrors.firstName} onChange={set('firstName')} />
+              <TextField label="Last name" autoComplete="family-name" value={values.lastName} error={fieldErrors.lastName} onChange={set('lastName')} />
             </div>
           )}
-          <TextField label="Email" type="email" placeholder="ama@example.com" autoComplete="email" value={values.email} error={fieldErrors.email} onChange={set('email')} />
+          <TextField label="Email" type="email" autoComplete="email" value={values.email} error={fieldErrors.email} onChange={set('email')} />
           <TextField
             label="Password"
             type="password"
-            placeholder={isSignup ? `At least ${MIN_PASSWORD} characters` : 'Your password'}
+            hint={isSignup ? `At least ${MIN_PASSWORD} characters.` : undefined}
             autoComplete={isSignup ? 'new-password' : 'current-password'}
             value={values.password}
             error={fieldErrors.password}
@@ -153,38 +115,52 @@ export function VendorAuth({ mode }: { mode: Mode }) {
           )}
 
           <button className={styles.submit} type="submit" disabled={pending}>
-            {pending ? (
-              <>
-                <span className={styles.spinner} aria-hidden="true" />
-                {isSignup ? 'Creating your account…' : 'Logging in…'}
-              </>
-            ) : (
-              <>
-                {isSignup ? 'Create my account' : 'Log in'}
-                <svg className={styles.arrow} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
-                  <path d="M5 12h14m-5-5 5 5-5 5" />
-                </svg>
-              </>
-            )}
+            {pending && <span className={styles.spinner} aria-hidden="true" />}
+            {pending ? (isSignup ? 'Creating your account…' : 'Logging in…') : isSignup ? 'Create account' : 'Log in'}
           </button>
 
-          <p className={styles.help}>Forgot your password? Call MarketiX on 020 000 0000.</p>
-          <p className={styles.help}>
-            MarketiX staff? <Link to="/login">Admin log in</Link>
-          </p>
+          {!isSignup && (
+            <p className={styles.help}>
+              Forgot your password? Call us on <a href="tel:0200000000">020 000 0000</a>.
+            </p>
+          )}
         </form>
-      </section>
-    </div>
-  )
-}
 
-function BenefitIcon({ path }: { path: string }) {
-  return (
-    <span className={styles.benefitIcon} aria-hidden="true">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d={path} />
-      </svg>
-    </span>
+        <footer className={styles.footer}>
+          <span>© {YEAR} MarketiX</span>
+          <Link to="/login">Staff log in</Link>
+        </footer>
+      </main>
+
+      <aside className={styles.showcase} aria-label="How MarketiX works">
+        <div className={styles.story}>
+          <h2 className={styles.headline}>Sell your goods on WhatsApp.</h2>
+          <ol className={styles.steps}>
+            <li>
+              <span className={styles.stepNumber}>01</span>
+              <span>
+                <strong>Your own number.</strong> We give your shop a WhatsApp number buyers can message.
+              </span>
+            </li>
+            <li>
+              <span className={styles.stepNumber}>02</span>
+              <span>
+                <strong>Orders in the chat.</strong> Buyers pick products and delivery in a WhatsApp form.
+              </span>
+            </li>
+            <li>
+              <span className={styles.stepNumber}>03</span>
+              <span>
+                <strong>Paid to your MoMo.</strong> We collect the money and send it to you.
+              </span>
+            </li>
+          </ol>
+        </div>
+        <div className={styles.demo}>
+          <OrderFlowDemo />
+        </div>
+      </aside>
+    </div>
   )
 }
 
@@ -194,11 +170,12 @@ interface TextFieldProps {
   onChange: (value: string) => void
   error?: string
   type?: 'text' | 'email' | 'password'
-  placeholder?: string
+  /** Shown under the input until there's an error. */
+  hint?: string
   autoComplete?: string
 }
 
-function TextField({ label, value, onChange, error, type = 'text', placeholder, autoComplete }: TextFieldProps) {
+function TextField({ label, value, onChange, error, type = 'text', hint, autoComplete }: TextFieldProps) {
   const [revealed, setRevealed] = useState(false)
   const isPassword = type === 'password'
 
@@ -209,7 +186,6 @@ function TextField({ label, value, onChange, error, type = 'text', placeholder, 
         <input
           className={error ? styles.inputInvalid : styles.input}
           type={isPassword && revealed ? 'text' : type}
-          placeholder={placeholder}
           autoComplete={autoComplete}
           value={value}
           aria-invalid={Boolean(error)}
@@ -227,7 +203,7 @@ function TextField({ label, value, onChange, error, type = 'text', placeholder, 
           {revealed ? 'Hide' : 'Show'}
         </button>
       )}
-      {error && <span className={styles.fieldError}>{error}</span>}
+      {error ? <span className={styles.fieldError}>{error}</span> : hint && <span className={styles.hint}>{hint}</span>}
     </div>
   )
 }

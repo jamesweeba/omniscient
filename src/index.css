@@ -32,6 +32,8 @@
   --color-danger: #b42318;
   --color-danger-bg: #fdecec;
 
+  --font-display: 'Bricolage Grotesque', Inter, system-ui, sans-serif;
+
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   color: var(--color-text);
