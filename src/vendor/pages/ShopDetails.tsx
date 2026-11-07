@@ -55,7 +55,8 @@ function ExistingShop({ status }: { status: TenantStatus }) {
 }
 
 const OTHER_MARKET = '__other'
-const MAX_DELIVERY_FEE = 500
+/** The API refuses higher fees (MarketiX takes its commission on items only). */
+const MAX_DELIVERY_FEE = 50
 const MAX_TITLE = 30
 
 type Field = 'name' | 'ownerFullName' | 'ownerPhone' | 'market' | 'fee' | 'momoNumber' | 'momoName' | 'newArea'

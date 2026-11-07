@@ -14,7 +14,7 @@ export interface Session {
   accessToken: string
 }
 
-const STORAGE_KEY = 'marketix.session'
+export const SESSION_STORAGE_KEY = 'marketix.session'
 
 type Listener = () => void
 const clearListeners = new Set<Listener>()
@@ -22,7 +22,7 @@ const clearListeners = new Set<Listener>()
 /** Returns the stored session, or null if missing or the token has expired. */
 export function getStoredSession(): Session | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY)
     if (!raw) return null
 
     const session = JSON.parse(raw) as Session
@@ -42,7 +42,7 @@ export function getAccessToken(): string | null {
 
 export function saveSession(session: Session): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
   } catch {
     // Storage unavailable; the session lasts until the page reloads.
   }
@@ -50,7 +50,7 @@ export function saveSession(session: Session): void {
 
 export function clearSession(): void {
   try {
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(SESSION_STORAGE_KEY)
   } catch {
     // Storage unavailable; nothing to clear.
   }
