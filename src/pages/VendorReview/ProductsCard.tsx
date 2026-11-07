@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react'
 import { Dialog } from '@/components/Dialog/Dialog'
 import { SearchField } from '@/components/FilterControls/FilterControls'
+import { FilterTabs } from '@/components/FilterTabs/FilterTabs'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formatCedis } from '@/lib/format'
 import { productPhotoSrc, type Product } from '@/lib/vendorPortal'
 import { fetchVendorProducts, type ProductStock, type VendorDetail } from '@/lib/vendors'
-import page from '@/styles/page.module.css'
 import { WarningIcon } from './DetailCards'
 import styles from './VendorReview.module.css'
 
@@ -52,23 +52,16 @@ export function ProductsCard({ vendor }: { vendor: VendorDetail }) {
         />
       </div>
 
-      <div className={page.tabs} role="group" aria-label="Filter by stock">
-        {STOCK_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            className={tab.key === stock ? page.tabActive : page.tab}
-            aria-pressed={tab.key === stock}
-            onClick={() => {
-              setStock(tab.key)
-              setPageNumber(1)
-            }}
-          >
-            {tab.label}
-            {data && <span className={page.tabCount}>{data.counts[tab.key]}</span>}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Filter by stock"
+        tabs={STOCK_TABS}
+        active={stock}
+        count={(t) => data?.counts[t.key]}
+        onSelect={(key) => {
+          setStock(key)
+          setPageNumber(1)
+        }}
+      />
 
       {products.status === 'loading' && <p className={styles.mutedText}>Loading products…</p>}
       {products.status === 'error' && <p className={styles.errorText}>{products.error}</p>}

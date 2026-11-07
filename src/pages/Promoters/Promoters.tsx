@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
 import { SearchField } from '@/components/FilterControls/FilterControls'
+import { FilterTabs } from '@/components/FilterTabs/FilterTabs'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { StatCard, StatGrid } from '@/components/StatCard/StatCard'
 import { useAsync } from '@/hooks/useAsync'
@@ -69,20 +70,13 @@ export function Promoters() {
         </StatGrid>
       )}
 
-      <div className={page.tabs} role="group" aria-label="Filter by status">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={t.key === status ? page.tabActive : page.tab}
-            aria-pressed={t.key === status}
-            onClick={() => updateParams({ status: t.key === 'all' ? null : t.key, page: null })}
-          >
-            {t.label}
-            {summary && t.count && <span className={page.tabCount}>{t.count(summary.promoters)}</span>}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Filter by status"
+        tabs={TABS}
+        active={status}
+        count={(t) => summary && t.count?.(summary.promoters)}
+        onSelect={(key) => updateParams({ status: key === 'all' ? null : key, page: null })}
+      />
 
       <section className={table.panel} aria-label="Promoters">
         <div className={result.isFetching && data ? table.loading : undefined}>

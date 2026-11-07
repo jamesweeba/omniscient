@@ -1,8 +1,7 @@
 import { api, apiBlob, type ApiPage } from './api'
 
 /** A product's video (see VIDEO_SPEC.md in the API repo). */
-
-export type VideoStatus = 'NONE' | 'PROCESSING' | 'PENDING' | 'REJECTED' | 'FAILED'
+type VideoStatus = 'NONE' | 'PROCESSING' | 'PENDING' | 'REJECTED' | 'FAILED'
 
 export interface ProductVideo {
   /** The latest upload: NONE, PROCESSING (being converted), PENDING (waiting for an admin), REJECTED or FAILED. */
@@ -36,8 +35,6 @@ export interface ProductVideos {
 
 export const fetchProductVideos = (productId: string) => api.get<ProductVideos>(`/products/${productId}/videos`)
 
-export const fetchProductVideo = (productId: string, measure = '') => api.get<ProductVideo>(`/products/${productId}/video${measureQuery(measure)}`)
-
 export function uploadProductVideo(productId: string, file: File, measure = ''): Promise<ProductVideo> {
   const form = new FormData()
   form.append('file', file, file.name || 'video.mp4')
@@ -66,8 +63,3 @@ export const approveProductVideo = (productId: string, uploadedAt: string, measu
 
 export const rejectProductVideo = (productId: string, uploadedAt: string, reason: string, measure = '') =>
   api.post<ProductVideo>(`/admin/products/${productId}/video/reject${measureQuery(measure)}`, { uploadedAt, reason })
-
-export const removeLiveProductVideo = (productId: string, reason: string, measure = '') =>
-  api.post<ProductVideo>(`/admin/products/${productId}/video/remove${measureQuery(measure)}`, { reason })
-
-export const formatSeconds = (seconds: number | null) => (seconds === null ? '' : `${seconds}s`)

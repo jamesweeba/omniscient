@@ -1,11 +1,9 @@
 import { Link } from 'react-router'
-import { Badge } from '@/components/Badge/Badge'
-import { useAction } from '@/hooks/useAction'
-import { cedis, formatDateTime } from '@/lib/format'
-import { PAYOUT_STATUS } from '@/lib/payouts'
+import { formatDateTime } from '@/lib/format'
 import { formatPhone } from '@/lib/phone'
 import { retryPromoterPayout, type PromoterPayoutRow } from '@/lib/promotersAdmin'
 import table from '@/styles/table.module.css'
+import { PayoutCells } from '../Payouts/PayoutCells'
 
 /** Promoter MoMo payouts, with Retry on the latest failed one. `showPromoter`: a column naming the promoter (off on their own page). */
 export function PromoterPayoutsTable({ payouts, emptyMessage, showPromoter = true }: { payouts: PromoterPayoutRow[]; emptyMessage: string; showPromoter?: boolean }) {
@@ -42,10 +40,6 @@ export function PromoterPayoutsTable({ payouts, emptyMessage, showPromoter = tru
 }
 
 function PayoutRow({ payout, showPromoter }: { payout: PromoterPayoutRow; showPromoter: boolean }) {
-  const { pending, error, run } = useAction()
-  const display = PAYOUT_STATUS[payout.status]
-  const superseded = payout.superseded && payout.status === 'FAILED'
-
   return (
     <tr>
       <td className={table.nowrap}>
@@ -68,41 +62,7 @@ function PayoutRow({ payout, showPromoter }: { payout: PromoterPayoutRow; showPr
           )}
         </td>
       )}
-      <td className={table.nowrap}>
-        <strong>{cedis(payout.amount)}</strong>
-      </td>
-      <td className={table.nowrap}>
-        <div className={table.stack}>
-          <span>{formatPhone(payout.momoNumber, 'local')}</span>
-          {payout.momoName && <span className={table.secondary}>{payout.momoName}</span>}
-        </div>
-      </td>
-      <td>
-        <div className={table.stack}>
-          <span>
-            <Badge tone={superseded ? 'neutral' : display.tone}>{superseded ? 'Failed · sent again later' : display.label}</Badge>
-          </span>
-          {payout.status === 'SUCCESS' && payout.paidAt && <span className={table.secondary}>{formatDateTime(payout.paidAt)}</span>}
-          {payout.failureReason && <span className={`${table.secondary} ${table.warning}`}>{payout.failureReason}</span>}
-          {error && (
-            <span className={`${table.secondary} ${table.warning}`} role="alert">
-              {error}
-            </span>
-          )}
-        </div>
-      </td>
-      <td className={table.actionCell}>
-        {payout.status === 'FAILED' && !payout.superseded && (
-          <button
-            className={table.rowButton}
-            type="button"
-            disabled={pending}
-            onClick={() => run(() => retryPromoterPayout(payout.id), { fallback: 'Couldn’t retry. Please try again.' })}
-          >
-            {pending ? 'Retrying…' : 'Retry'}
-          </button>
-        )}
-      </td>
+      <PayoutCells payout={payout} retry={() => retryPromoterPayout(payout.id)} />
     </tr>
   )
 }
