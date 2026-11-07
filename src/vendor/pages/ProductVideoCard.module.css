@@ -26,3 +26,23 @@
   align-items: center;
   gap: 8px 12px;
 }
+
+/* The video box under a measure in "How you sell it". */
+.measureBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-surface-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+}
+
+.measureTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.playerCompact {
+  max-height: 260px;
+}

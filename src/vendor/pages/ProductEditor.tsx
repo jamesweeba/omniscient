@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router'
 import { BackLink } from '@/components/BackLink/BackLink'
 import { CameraIcon } from '@/components/icons/CameraIcon'
 import { useAsync } from '@/hooks/useAsync'
+import { useProductVideos } from '@/hooks/useProductVideos'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { errorMessage } from '@/lib/api'
 import { prepareUpload } from '@/lib/images'
@@ -11,7 +12,7 @@ import { FileButton } from '@/vendor/FileButton'
 import { useVendorPortal } from '../useVendorPortal'
 import styles from '../vendor.module.css'
 import editor from './Products.module.css'
-import { ProductVideoCard } from './ProductVideoCard'
+import { GeneralVideoCard, MeasureVideoBox } from './ProductVideoCard'
 import { LockNotice } from './VendorPageHeader'
 
 /** Add a product (/vendor/products/new) or edit one (/vendor/products/:productId). */
@@ -39,7 +40,6 @@ export function ProductEditor() {
       {product.status === 'success' && categories.status === 'success' && (
         <ProductForm key={productId ?? 'new'} saved={product.data} categories={categories.data} readOnly={isReadOnly(shop.status)} />
       )}
-      {product.status === 'success' && product.data && <ProductVideoCard productId={product.data.id} readOnly={isReadOnly(shop.status)} />}
     </>
   )
 }
@@ -113,6 +113,9 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
   const [errors, setErrors] = useState<Errors>({})
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  // Videos belong to saved measures: one box per measure row, and the product's own video.
+  const videos = useProductVideos(saved?.id ?? null)
+  const savedCodes = new Set(saved?.measures.map((m) => m.code) ?? [])
 
   /** A single row without a label is a plain price; otherwise each row is a measure. */
   const simple = rows.length === 1 && !rows[0].label.trim()
@@ -254,205 +257,221 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
   }
 
   return (
-    <form className={styles.card} onSubmit={handleSubmit} noValidate>
-      <fieldset className={styles.fieldset} disabled={readOnly || pending}>
-        <label className={styles.field}>
-          Product name
-          <input className={errors.name ? styles.inputInvalid : styles.input} placeholder="Tomatoes" value={name} onChange={(e) => edit('name', setName)(e.target.value)} />
-          {errors.name && <span className={styles.fieldError}>{errors.name}</span>}
-        </label>
+    <>
+      <form className={styles.card} onSubmit={handleSubmit} noValidate>
+        <fieldset className={styles.fieldset} disabled={readOnly || pending}>
+          <label className={styles.field}>
+            Product name
+            <input className={errors.name ? styles.inputInvalid : styles.input} placeholder="Tomatoes" value={name} onChange={(e) => edit('name', setName)(e.target.value)} />
+            {errors.name && <span className={styles.fieldError}>{errors.name}</span>}
+          </label>
 
-        <label className={styles.field}>
-          Category
-          <select className={styles.select} value={categoryId} onChange={(e) => edit('categoryId', setCategoryId)(e.target.value)}>
-            <option value="" disabled>
-              Choose a category
-            </option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
+          <label className={styles.field}>
+            Category
+            <select className={styles.select} value={categoryId} onChange={(e) => edit('categoryId', setCategoryId)(e.target.value)}>
+              <option value="" disabled>
+                Choose a category
               </option>
-            ))}
-          </select>
-          {errors.categoryId ? (
-            <span className={styles.fieldError}>{errors.categoryId}</span>
-          ) : (
-            <span className={styles.fieldHint}>{categories.find((c) => c.id === categoryId)?.description}</span>
-          )}
-        </label>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+            {errors.categoryId ? (
+              <span className={styles.fieldError}>{errors.categoryId}</span>
+            ) : (
+              <span className={styles.fieldHint}>{categories.find((c) => c.id === categoryId)?.description}</span>
+            )}
+          </label>
 
-        <div className={styles.field} role="group" aria-labelledby="sold-as">
-          <span id="sold-as">{simple ? 'Price (GH₵)' : 'How you sell it'}</span>
-          <span className={styles.fieldHint}>
-            {simple
-              ? 'Sold by the olonka, basket or bag? Tap one below and give each its price.'
-              : `Buyers pick one. Names up to ${MAX_MEASURE_LABEL} characters, e.g. “Half basket”.`}
-          </span>
-          <div className={editor.measures}>
-            {rows.map((row, index) => (
-              <div key={row.key} className={editor.measureRow}>
-                {!simple && (
+          <div className={styles.field} role="group" aria-labelledby="sold-as">
+            <span id="sold-as">{simple ? 'Price (GH₵)' : 'How you sell it'}</span>
+            <span className={styles.fieldHint}>
+              {simple
+                ? 'Sold by the olonka, basket or bag? Tap one below and give each its price.'
+                : `Buyers pick one. Names up to ${MAX_MEASURE_LABEL} characters, e.g. “Half basket”.`}
+            </span>
+            <div className={editor.measures}>
+              {rows.map((row, index) => (
+                <div key={row.key} className={editor.measureRow}>
+                  {!simple && (
+                    <input
+                      className={styles.input}
+                      aria-label={`Option ${index + 1} name`}
+                      maxLength={MAX_MEASURE_LABEL}
+                      placeholder="Half basket"
+                      value={row.label}
+                      onChange={(e) => changeRow(row.key, { label: e.target.value })}
+                    />
+                  )}
                   <input
-                    className={styles.input}
-                    aria-label={`Option ${index + 1} name`}
-                    maxLength={MAX_MEASURE_LABEL}
-                    placeholder="Half basket"
-                    value={row.label}
-                    onChange={(e) => changeRow(row.key, { label: e.target.value })}
+                    className={`${styles.input} ${editor.priceInput}`}
+                    aria-label={simple ? 'Price in cedis' : `Option ${index + 1} price in cedis`}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    placeholder="GH₵"
+                    value={row.price}
+                    onChange={(e) => changeRow(row.key, { price: e.target.value })}
                   />
+                  {!simple && (
+                    <input
+                      className={`${styles.input} ${editor.measureNote}`}
+                      aria-label={`Option ${index + 1} note`}
+                      maxLength={MAX_MEASURE_DESCRIPTION}
+                      placeholder="Note, e.g. About 2 kg (optional)"
+                      value={row.description}
+                      onChange={(e) => changeRow(row.key, { description: e.target.value })}
+                    />
+                  )}
+                  {!simple && (
+                    <div className={editor.measureVideo}>
+                      <MeasureVideoBox
+                        productId={saved?.id ?? null}
+                        measure={row.code && savedCodes.has(row.code) ? row.code : null}
+                        label={row.label}
+                        state={videos}
+                        readOnly={readOnly}
+                      />
+                    </div>
+                  )}
+                  {!simple && (
+                    <button
+                      className={editor.removeRow}
+                      type="button"
+                      aria-label={`Remove option ${index + 1}`}
+                      onClick={() => setRows((current) => (current.length > 1 ? current.filter((r) => r.key !== row.key) : [newRow('', row.price)]))}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {errors.rows && <span className={styles.fieldError}>{errors.rows}</span>}
+            {rows.length < MAX_MEASURES && unusedChips.length > 0 && (
+              <div className={editor.chips} role="group" aria-label="Add a common way of selling">
+                {unusedChips.map((label) => (
+                  <button key={label} className={editor.chip} type="button" onClick={() => addMeasure(label)}>
+                    + {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {rows.length < MAX_MEASURES && (
+              <button
+                className={styles.textButton}
+                type="button"
+                onClick={() => {
+                  // Turning a plain price into options: give the first option a name field too.
+                  setRows((current) => [...current, newRow()])
+                  if (simple) changeRow(rows[0].key, { label: 'Each' })
+                }}
+              >
+                + {simple ? 'Sell it in different sizes' : 'Add another option'}
+              </button>
+            )}
+          </div>
+
+          <label className={styles.choice}>
+            <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />
+            In stock — buyers can order it now
+          </label>
+
+          <label className={styles.field}>
+            <span>
+              Note <span className={styles.optional}>· optional</span>
+            </span>
+            <input className={styles.input} placeholder="Fresh from Techiman" value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
+
+          <label className={styles.field}>
+            <span>
+              Promoter commission (%) <span className={styles.optional}>· optional</span>
+            </span>
+            <input
+              className={errors.promoterRate ? styles.inputInvalid : styles.input}
+              inputMode="numeric"
+              placeholder="Your shop rate"
+              value={promoterRate}
+              onChange={(e) => edit('promoterRate', setPromoterRate)(e.target.value.replace(/[^\d]/g, ''))}
+            />
+            {errors.promoterRate ? (
+              <span className={styles.fieldError}>{errors.promoterRate}</span>
+            ) : (
+              <span className={styles.fieldHint}>
+                What promoters earn on this product, from {PROMOTER_RATE_MIN}% to {PROMOTER_RATE_MAX}%. Leave it empty to use the rate on your Promoters page.
+              </span>
+            )}
+          </label>
+
+          <div className={styles.field} role="group" aria-labelledby="photo-label">
+            <span id="photo-label">
+              Photo <span className={styles.optional}>· optional</span>
+            </span>
+            <div className={editor.photo}>
+              <div className={editor.photoPreview}>
+                {photoSrc ? <img src={photoSrc} alt="Product photo" /> : <CameraIcon size={28} />}
+              </div>
+              <div className={editor.photoActions}>
+                {hasCamera && (
+                  <FileButton camera accept="image/*" onPick={pickPhoto}>
+                    Take photo
+                  </FileButton>
                 )}
-                <input
-                  className={`${styles.input} ${editor.priceInput}`}
-                  aria-label={simple ? 'Price in cedis' : `Option ${index + 1} price in cedis`}
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="0.01"
-                  placeholder="GH₵"
-                  value={row.price}
-                  onChange={(e) => changeRow(row.key, { price: e.target.value })}
-                />
-                {!simple && (
-                  <input
-                    className={`${styles.input} ${editor.measureNote}`}
-                    aria-label={`Option ${index + 1} note`}
-                    maxLength={MAX_MEASURE_DESCRIPTION}
-                    placeholder="Note, e.g. About 2 kg (optional)"
-                    value={row.description}
-                    onChange={(e) => changeRow(row.key, { description: e.target.value })}
-                  />
-                )}
-                {!simple && (
+                <FileButton accept="image/*" onPick={pickPhoto}>
+                  {photoBusy ? 'Preparing…' : photoSrc ? 'Choose another' : hasCamera ? 'Choose from phone' : 'Choose photo'}
+                </FileButton>
+                {photoSrc && (
                   <button
-                    className={editor.removeRow}
+                    className={styles.textButton}
                     type="button"
-                    aria-label={`Remove option ${index + 1}`}
-                    onClick={() => setRows((current) => (current.length > 1 ? current.filter((r) => r.key !== row.key) : [newRow('', row.price)]))}
+                    onClick={() => {
+                      setPhoto(saved?.photoUrl ? { kind: 'remove' } : { kind: 'keep' })
+                      setPhotoError(null)
+                    }}
                   >
-                    ✕
+                    Remove photo
                   </button>
                 )}
               </div>
-            ))}
+            </div>
+            {photoError ? (
+              <span className={styles.fieldError} role="alert">
+                {photoError}
+              </span>
+            ) : (
+              <span className={styles.fieldHint}>
+                {photo.kind === 'new' ? 'The photo is saved when you save the product.' : 'A clear photo, taken in good light.'}
+              </span>
+            )}
           </div>
-          {errors.rows && <span className={styles.fieldError}>{errors.rows}</span>}
-          {rows.length < MAX_MEASURES && unusedChips.length > 0 && (
-            <div className={editor.chips} role="group" aria-label="Add a common way of selling">
-              {unusedChips.map((label) => (
-                <button key={label} className={editor.chip} type="button" onClick={() => addMeasure(label)}>
-                  + {label}
-                </button>
-              ))}
-            </div>
-          )}
-          {rows.length < MAX_MEASURES && (
-            <button
-              className={styles.textButton}
-              type="button"
-              onClick={() => {
-                // Turning a plain price into options: give the first option a name field too.
-                setRows((current) => [...current, newRow()])
-                if (simple) changeRow(rows[0].key, { label: 'Each' })
-              }}
-            >
-              + {simple ? 'Sell it in different sizes' : 'Add another option'}
+        </fieldset>
+
+        {error && (
+          <p className={styles.alertError} role="alert">
+            {error}
+          </p>
+        )}
+        {!readOnly && (
+          <div className={editor.formActions}>
+            <button className={styles.primary} type="submit" disabled={pending}>
+              {pending ? 'Saving…' : saved ? 'Save changes' : 'Add product'}
             </button>
-          )}
-        </div>
-
-        <label className={styles.choice}>
-          <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />
-          In stock — buyers can order it now
-        </label>
-
-        <label className={styles.field}>
-          <span>
-            Note <span className={styles.optional}>· optional</span>
-          </span>
-          <input className={styles.input} placeholder="Fresh from Techiman" value={note} onChange={(e) => setNote(e.target.value)} />
-        </label>
-
-        <label className={styles.field}>
-          <span>
-            Promoter commission (%) <span className={styles.optional}>· optional</span>
-          </span>
-          <input
-            className={errors.promoterRate ? styles.inputInvalid : styles.input}
-            inputMode="numeric"
-            placeholder="Your shop rate"
-            value={promoterRate}
-            onChange={(e) => edit('promoterRate', setPromoterRate)(e.target.value.replace(/[^\d]/g, ''))}
-          />
-          {errors.promoterRate ? (
-            <span className={styles.fieldError}>{errors.promoterRate}</span>
-          ) : (
-            <span className={styles.fieldHint}>
-              What promoters earn on this product, from {PROMOTER_RATE_MIN}% to {PROMOTER_RATE_MAX}%. Leave it empty to use the rate on your Promoters page.
-            </span>
-          )}
-        </label>
-
-        <div className={styles.field} role="group" aria-labelledby="photo-label">
-          <span id="photo-label">
-            Photo <span className={styles.optional}>· optional</span>
-          </span>
-          <div className={editor.photo}>
-            <div className={editor.photoPreview}>
-              {photoSrc ? <img src={photoSrc} alt="Product photo" /> : <CameraIcon size={28} />}
-            </div>
-            <div className={editor.photoActions}>
-              {hasCamera && (
-                <FileButton camera accept="image/*" onPick={pickPhoto}>
-                  Take photo
-                </FileButton>
-              )}
-              <FileButton accept="image/*" onPick={pickPhoto}>
-                {photoBusy ? 'Preparing…' : photoSrc ? 'Choose another' : hasCamera ? 'Choose from phone' : 'Choose photo'}
-              </FileButton>
-              {photoSrc && (
-                <button
-                  className={styles.textButton}
-                  type="button"
-                  onClick={() => {
-                    setPhoto(saved?.photoUrl ? { kind: 'remove' } : { kind: 'keep' })
-                    setPhotoError(null)
-                  }}
-                >
-                  Remove photo
-                </button>
-              )}
-            </div>
+            {saved && (
+              <button className={styles.dangerText} type="button" disabled={pending} onClick={handleDelete}>
+                Delete this product
+              </button>
+            )}
           </div>
-          {photoError ? (
-            <span className={styles.fieldError} role="alert">
-              {photoError}
-            </span>
-          ) : (
-            <span className={styles.fieldHint}>
-              {photo.kind === 'new' ? 'The photo is saved when you save the product.' : 'A clear photo, taken in good light.'}
-            </span>
-          )}
-        </div>
-      </fieldset>
-
-      {error && (
-        <p className={styles.alertError} role="alert">
-          {error}
-        </p>
+        )}
+      </form>
+      {saved && (
+        <GeneralVideoCard productId={saved.id} hasMeasures={saved.measures.length > 0} state={videos} readOnly={readOnly} />
       )}
-      {!readOnly && (
-        <div className={editor.formActions}>
-          <button className={styles.primary} type="submit" disabled={pending}>
-            {pending ? 'Saving…' : saved ? 'Save changes' : 'Add product'}
-          </button>
-          {saved && (
-            <button className={styles.dangerText} type="button" disabled={pending} onClick={handleDelete}>
-              Delete this product
-            </button>
-          )}
-        </div>
-      )}
-    </form>
+    </>
   )
 }
 

@@ -1,99 +1,91 @@
-import { useCallback, useEffect, useState } from 'react'
 import { useAction } from '@/hooks/useAction'
-import { useAsync } from '@/hooks/useAsync'
 import { useBlobFile } from '@/hooks/useBlobUrl'
+import type { VideosState } from '@/hooks/useProductVideos'
 import {
   cancelProductVideo,
-  fetchProductVideos,
   fetchVideoFile,
   MAX_VIDEO_SECONDS,
   MAX_VIDEO_UPLOAD_BYTES,
   removeProductVideo,
   uploadProductVideo,
   type ProductVideo,
-  type ProductVideos,
 } from '@/lib/productVideos'
 import { FileButton } from '@/vendor/FileButton'
 import styles from '../vendor.module.css'
 import local from './ProductVideoCard.module.css'
 
-/** How often to check on a video being converted. */
-const POLL_MS = 3000
-/** The whole product, as a "Video for" choice. */
+/** The whole product's video. */
 const WHOLE = ''
 
-/** A short sign of where a video stands, for the "Video for" choices. */
-function statusMark(video: ProductVideo): string {
-  if (video.status === 'PROCESSING' || video.status === 'PENDING') return ' ⏳'
-  if (video.status === 'REJECTED' || video.status === 'FAILED') return ' ⚠️'
-  return video.live ? ' 🎥' : ''
+/**
+ * The video box under one measure in "How you sell it". Buyers who choose this measure and
+ * tap "Watch video" get this one. A measure that isn't saved yet can't have a video.
+ */
+export function MeasureVideoBox({
+  productId,
+  measure,
+  label,
+  state,
+  readOnly,
+}: {
+  /** Null for a product that isn't saved yet. */
+  productId: string | null
+  /** The measure's code, or null for a measure that isn't saved yet. */
+  measure: string | null
+  label: string
+  state: VideosState
+  readOnly: boolean
+}) {
+  const video = measure ? state.videoFor(measure) : null
+  return (
+    <div className={local.measureBox}>
+      <span className={local.measureTitle}>🎥 Video{label.trim() ? ` of the ${label.trim().toLowerCase()}` : ''}</span>
+      {!productId || !measure ? (
+        <span className={styles.fieldHint}>Save changes to add a video for this measure.</span>
+      ) : state.error ? (
+        <span className={styles.fieldError}>{state.error}</span>
+      ) : !video ? (
+        <span className={styles.fieldHint}>Loading…</span>
+      ) : (
+        <VideoBody productId={productId} measure={measure} video={video} readOnly={readOnly} compact onChange={(v) => state.update(measure, v)} />
+      )}
+    </div>
+  )
 }
 
 /**
- * Short videos of the product: one for the whole product, and one for each measure (an
- * olonka and a table top look very different). Each uploads straight away (not with "Save
- * changes"), is converted on the server, and buyers see it once MarketiX approves it.
+ * The whole product's video. For a product sold at one price it's the product's video. A
+ * product with measures has a video per measure instead, so this only shows a general video
+ * uploaded earlier, which buyers still see for measures without their own, with a way to remove it.
  */
-export function ProductVideoCard({ productId, readOnly }: { productId: string; readOnly: boolean }) {
-  const load = useCallback(() => fetchProductVideos(productId), [productId])
-  const result = useAsync(load, { live: true })
-  const [videos, setVideos] = useState<ProductVideos | null>(null)
-  const [seen, setSeen] = useState<ProductVideos | null>(null)
-  const fresh = result.status === 'success' ? result.data : null
-  if (fresh && fresh !== seen) {
-    setSeen(fresh)
-    setVideos(fresh)
-  }
-  const [target, setTarget] = useState(WHOLE)
-  const { reload } = result
-
-  // While the server converts a video, check back every few seconds.
-  const processing = videos ? [videos.product, ...videos.measures.map((m) => m.video)].some((v) => v.status === 'PROCESSING') : false
-  useEffect(() => {
-    if (!processing) return
-    const timer = setInterval(reload, POLL_MS)
-    return () => clearInterval(timer)
-  }, [processing, reload])
-
-  const measure = videos?.measures.find((m) => m.code === target) ?? null
-  const current = videos ? (measure ? measure.video : videos.product) : null
-  const update = (video: ProductVideo) =>
-    setVideos((v) => v && (measure ? { ...v, measures: v.measures.map((m) => (m.code === measure.code ? { ...m, video } : m)) } : { ...v, product: video }))
+export function GeneralVideoCard({ productId, hasMeasures, state, readOnly }: { productId: string; hasMeasures: boolean; state: VideosState; readOnly: boolean }) {
+  const video = state.videoFor(WHOLE)
+  const hasGeneral = Boolean(video && (video.live || video.status !== 'NONE'))
+  if (hasMeasures && !hasGeneral) return null
 
   return (
     <section className={styles.card} aria-labelledby="product-video">
       <h2 id="product-video" className={styles.cardTitle}>
-        Videos <span className={styles.optional}>· optional</span>
+        {hasMeasures ? 'General video' : 'Video'} <span className={styles.optional}>· optional</span>
       </h2>
       <p className={styles.muted}>
-        Short clips (up to {MAX_VIDEO_SECONDS} seconds) so buyers can see what they’re buying. Buyers tap “🎥 Watch video” on the order form and it plays in
-        their WhatsApp chat. MarketiX checks each video before buyers see it.
+        {hasMeasures
+          ? 'Each measure now has its own video above. Buyers still see this older general video for any measure without one; remove it once your measures have their own.'
+          : `A short clip (up to ${MAX_VIDEO_SECONDS} seconds) so buyers can see what they’re buying. Buyers tap “🎥 Watch video” on the order form and it plays in their WhatsApp chat. MarketiX checks each video before buyers see it.`}
       </p>
-      {result.status === 'loading' && !videos && <p className={styles.muted}>Loading…</p>}
-      {result.status === 'error' && <p className={styles.alertError}>{result.error}</p>}
-
-      {videos && videos.measures.length > 0 && (
-        <div className={styles.field} role="group" aria-label="Video for">
-          Video for
-          <div className={styles.choices}>
-            {[{ code: WHOLE, label: 'Whole product', video: videos.product }, ...videos.measures].map((m) => (
-              <label key={m.code || 'whole'} className={styles.choice}>
-                <input type="radio" name="video-for" checked={target === m.code} onChange={() => setTarget(m.code)} />
-                {m.label}
-                {statusMark(m.video)}
-              </label>
-            ))}
-          </div>
-          <span className={styles.fieldHint}>
-            {measure
-              ? `Buyers who choose ${measure.label} see this video. Without one, they see the whole product’s.`
-              : 'Buyers see this one for any measure that has no video of its own. Add a video for a measure that looks different, e.g. a table top and an olonka.'}{' '}
-            🎥 live · ⏳ waiting · ⚠️ needs attention. Save new measures first to give them a video.
-          </span>
-        </div>
+      {state.error && <p className={styles.alertError}>{state.error}</p>}
+      {!video && !state.error && <p className={styles.muted}>Loading…</p>}
+      {video && (
+        <VideoBody
+          productId={productId}
+          measure={WHOLE}
+          video={video}
+          // With measures, a general video can only be removed, not replaced.
+          readOnly={readOnly}
+          removeOnly={hasMeasures}
+          onChange={(v) => state.update(WHOLE, v)}
+        />
       )}
-
-      {current && <VideoBody key={target || 'whole'} productId={productId} measure={target} video={current} readOnly={readOnly} onChange={update} />}
     </section>
   )
 }
@@ -103,6 +95,8 @@ function VideoBody({
   measure,
   video,
   readOnly,
+  compact = false,
+  removeOnly = false,
   onChange,
 }: {
   productId: string
@@ -110,6 +104,10 @@ function VideoBody({
   measure: string
   video: ProductVideo
   readOnly: boolean
+  /** A smaller player, for the box under a measure. */
+  compact?: boolean
+  /** No uploading, only cancelling and removing. */
+  removeOnly?: boolean
   onChange: (v: ProductVideo) => void
 }) {
   const { pending: busy, error, setError, run } = useAction()
@@ -132,7 +130,7 @@ function VideoBody({
           <span className={local.slotTitle}>
             Buyers see this video{video.live.seconds ? ` · ${video.live.seconds}s` : ''}
           </span>
-          <VideoPlayer url={video.live.url} posterUrl={video.live.posterUrl} />
+          <VideoPlayer url={video.live.url} posterUrl={video.live.posterUrl} compact={compact} />
         </div>
       )}
 
@@ -147,7 +145,7 @@ function VideoBody({
             Waiting for MarketiX to approve{video.pending.seconds ? ` · ${video.pending.seconds}s` : ''}
           </span>
           {video.pending.trimmed && <span className={styles.fieldHint}>Your video was longer than {MAX_VIDEO_SECONDS} seconds, so we kept the first {MAX_VIDEO_SECONDS}.</span>}
-          <VideoPlayer url={video.pending.url} posterUrl={video.pending.posterUrl} />
+          <VideoPlayer url={video.pending.url} posterUrl={video.pending.posterUrl} compact={compact} />
           {video.live && <span className={styles.fieldHint}>Buyers keep seeing your current video until this one is approved.</span>}
         </div>
       )}
@@ -166,12 +164,16 @@ function VideoBody({
 
       {!readOnly && (
         <div className={local.actions}>
-          <FileButton camera accept="video/*" onPick={pick} disabled={busy}>
-            Record video
-          </FileButton>
-          <FileButton accept="video/*" onPick={pick} disabled={busy}>
-            {uploadLabel}
-          </FileButton>
+          {!removeOnly && (
+            <>
+              <FileButton camera accept="video/*" onPick={pick} disabled={busy}>
+                Record video
+              </FileButton>
+              <FileButton accept="video/*" onPick={pick} disabled={busy}>
+                {uploadLabel}
+              </FileButton>
+            </>
+          )}
           {(waiting || video.status === 'REJECTED' || video.status === 'FAILED') && (
             <button className={styles.textButton} type="button" disabled={busy} onClick={() => run(async () => onChange(await cancelProductVideo(productId, measure)))}>
               {waiting ? 'Cancel this upload' : 'Dismiss'}
@@ -194,10 +196,11 @@ function VideoBody({
 }
 
 /** Plays a protected video (fetched with the login token, so a plain src won't do). */
-export function VideoPlayer({ url, posterUrl }: { url: string; posterUrl?: string }) {
+export function VideoPlayer({ url, posterUrl, compact = false }: { url: string; posterUrl?: string; compact?: boolean }) {
   const file = useBlobFile(url, () => fetchVideoFile(url), 'Couldn’t load the video.')
   const poster = useBlobFile(posterUrl ?? null, () => fetchVideoFile(posterUrl!))
+  const className = compact ? `${local.player} ${local.playerCompact}` : local.player
   if (file.status === 'error') return <p className={styles.fieldError}>{file.error}</p>
-  if (file.status === 'loading') return <div className={local.player} aria-busy="true" />
-  return <video className={local.player} src={file.url} poster={poster.status === 'ready' ? poster.url : undefined} controls playsInline preload="metadata" />
+  if (file.status === 'loading') return <div className={className} aria-busy="true" />
+  return <video className={className} src={file.url} poster={poster.status === 'ready' ? poster.url : undefined} controls playsInline preload="metadata" />
 }
