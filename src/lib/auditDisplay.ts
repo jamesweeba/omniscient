@@ -4,7 +4,7 @@ import type { AuditAction } from './audit'
 interface ActionDisplay {
   label: string
   tone: BadgeTone
-  group: 'Shops' | 'Due diligence' | 'Notes' | 'Payouts' | 'WhatsApp numbers'
+  group: 'Shops' | 'Due diligence' | 'Notes' | 'Payouts' | 'WhatsApp numbers' | 'Promoters'
 }
 
 export const AUDIT_ACTION: Record<AuditAction, ActionDisplay> = {
@@ -31,6 +31,9 @@ export const AUDIT_ACTION: Record<AuditAction, ActionDisplay> = {
   NUMBER_RELEASED: { label: 'Number released', tone: 'danger', group: 'WhatsApp numbers' },
   NUMBER_FREED: { label: 'Number freed early', tone: 'info', group: 'WhatsApp numbers' },
   NUMBER_REFRESHED: { label: 'Number refreshed', tone: 'info', group: 'WhatsApp numbers' },
+  PROMOTER_SUSPENDED: { label: 'Promoter suspended', tone: 'danger', group: 'Promoters' },
+  PROMOTER_REINSTATED: { label: 'Promoter reinstated', tone: 'neutral', group: 'Promoters' },
+  PROMOTER_PAYOUT_RETRIED: { label: 'Promoter payout retried', tone: 'info', group: 'Promoters' },
 }
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION) as AuditAction[]
