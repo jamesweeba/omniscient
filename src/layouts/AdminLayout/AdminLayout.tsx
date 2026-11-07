@@ -22,7 +22,10 @@ export function AdminLayout() {
   // does this for the window).
   const { pathname } = useLocation()
   const contentRef = useRef<HTMLElement>(null)
-  useEffect(() => contentRef.current?.scrollTo(0, 0), [pathname])
+  // Braces matter: newer browsers return a Promise from scrollTo, and an effect may only return a cleanup function.
+  useEffect(() => {
+    contentRef.current?.scrollTo(0, 0)
+  }, [pathname])
 
   return (
     <div className={styles.shell}>
