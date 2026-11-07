@@ -58,6 +58,9 @@ export function AdminLayout() {
           <SidebarLink to={failedPayouts ? '/payouts?view=payouts&status=failed' : '/payouts'} label="Payouts" icon={<WalletIcon />}>
             {failedPayouts > 0 && <span className={styles.badgeWarning}>{failedPayouts} failed</span>}
           </SidebarLink>
+          <SidebarLink to="/videos" label="Videos" icon={<VideoIcon />}>
+            {counts && counts.videosToApprove > 0 && <span className={styles.badgeWarning}>{counts.videosToApprove} to approve</span>}
+          </SidebarLink>
           <SidebarLink to="/promoters" label="Promoters" icon={<MegaphoneIcon />} />
           <SidebarLink to="/audit-log" label="Audit log" icon={<LogIcon />} />
         </div>
@@ -132,6 +135,7 @@ const SECTIONS: Record<string, string> = {
   orders: 'Orders',
   payouts: 'Payouts',
   promoters: 'Promoters',
+  videos: 'Videos',
   'audit-log': 'Audit log',
 }
 
@@ -236,6 +240,16 @@ function MegaphoneIcon() {
       <path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1z" />
       <path d="M17 9a4 4 0 0 1 0 6" />
       <path d="M8 15l1 4h2" />
+    </NavIcon>
+  )
+}
+
+/** A video camera: product videos waiting for approval. */
+function VideoIcon() {
+  return (
+    <NavIcon>
+      <rect x="3" y="6.5" width="13" height="11" rx="2" />
+      <path d="m16 10.5 5-3v9l-5-3z" />
     </NavIcon>
   )
 }

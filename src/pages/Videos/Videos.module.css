@@ -1,0 +1,14 @@
+/* Videos waiting for approval: a grid of cards, each with a player. */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.rejectForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

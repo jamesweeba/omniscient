@@ -21,6 +21,7 @@ const NumberPool = page(() => import('@/pages/NumberPool/NumberPool'), 'NumberPo
 const Orders = page(() => import('@/pages/Orders/Orders'), 'Orders')
 const Payouts = page(() => import('@/pages/Payouts/Payouts'), 'Payouts')
 const AdminPromoters = page(() => import('@/pages/Promoters/Promoters'), 'Promoters')
+const AdminVideos = page(() => import('@/pages/Videos/Videos'), 'Videos')
 const AdminPromoterDetail = page(() => import('@/pages/Promoters/PromoterDetail'), 'PromoterDetail')
 const ReviewQueue = page(() => import('@/pages/ReviewQueue/ReviewQueue'), 'ReviewQueue')
 const VendorOrdersPage = page(() => import('@/pages/VendorOrders/VendorOrders'), 'VendorOrdersPage')
@@ -61,6 +62,7 @@ function App() {
                   <Route path="audit-log" element={<AuditLog />} />
                   <Route path="payouts" element={<Payouts />} />
                   <Route path="promoters" element={<AdminPromoters />} />
+                  <Route path="videos" element={<AdminVideos />} />
                   <Route path="promoters/:promoterId" element={<AdminPromoterDetail />} />
                 </Route>
               </Route>

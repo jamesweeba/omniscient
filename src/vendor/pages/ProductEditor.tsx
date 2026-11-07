@@ -11,6 +11,7 @@ import { FileButton } from '@/vendor/FileButton'
 import { useVendorPortal } from '../useVendorPortal'
 import styles from '../vendor.module.css'
 import editor from './Products.module.css'
+import { ProductVideoCard } from './ProductVideoCard'
 import { LockNotice } from './VendorPageHeader'
 
 /** Add a product (/vendor/products/new) or edit one (/vendor/products/:productId). */
@@ -38,6 +39,7 @@ export function ProductEditor() {
       {product.status === 'success' && categories.status === 'success' && (
         <ProductForm key={productId ?? 'new'} saved={product.data} categories={categories.data} readOnly={isReadOnly(shop.status)} />
       )}
+      {product.status === 'success' && product.data && <ProductVideoCard productId={product.data.id} readOnly={isReadOnly(shop.status)} />}
     </>
   )
 }
