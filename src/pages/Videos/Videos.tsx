@@ -43,7 +43,7 @@ export function Videos() {
         <>
           <div className={styles.grid}>
             {data.data.map((row) => (
-              <VideoCard key={`${row.productId}:${row.video.pending?.uploadedAt}`} row={row} />
+              <VideoCard key={`${row.productId}:${row.measure?.code ?? ''}:${row.video.pending?.uploadedAt}`} row={row} />
             ))}
           </div>
           <Pagination page={pageNumber} pageSize={PAGE_SIZE} total={data.meta.total} onPageChange={(p) => updateParams({ page: p > 1 ? String(p) : null })} />
@@ -66,13 +66,17 @@ function VideoCard({ row }: { row: WaitingVideo }) {
   async function reject(event: FormEvent) {
     event.preventDefault()
     if (!reason.trim()) return
-    await run(() => rejectProductVideo(row.productId, pending!.uploadedAt, reason.trim()), { keepPendingOnSuccess: true, onError: (e) => onError(e) ?? 'Couldn’t reject it. Please try again.' })
+    await run(() => rejectProductVideo(row.productId, pending!.uploadedAt, reason.trim(), row.measure?.code ?? ''), { keepPendingOnSuccess: true, onError: (e) => onError(e) ?? 'Couldn’t reject it. Please try again.' })
   }
 
   return (
-    <section className={review.card} aria-label={`${row.productName} from ${row.tenant.name}`}>
+    <section className={review.card} aria-label={`${row.productName}${row.measure ? ` (${row.measure.label})` : ''} from ${row.tenant.name}`}>
       <div className={review.cardIntro}>
-        <h2 className={review.cardTitle}>{row.productName}</h2>
+        <h2 className={review.cardTitle}>
+          {row.productName}
+          {row.measure ? ` · ${row.measure.label}` : ''}
+        </h2>
+        {row.measure && <p className={review.meta}>A video of this measure only.</p>}
         <p className={review.meta}>
           <Link to={`/vendors/${row.tenant.id}`}>{row.tenant.name}</Link> · uploaded {formatDateTime(pending.uploadedAt)}
           {pending.seconds ? ` · ${pending.seconds}s` : ''}
@@ -112,7 +116,7 @@ function VideoCard({ row }: { row: WaitingVideo }) {
             className={review.primaryButton}
             type="button"
             disabled={busy}
-            onClick={() => run(() => approveProductVideo(row.productId, pending.uploadedAt), { keepPendingOnSuccess: true, onError: (e) => onError(e) ?? 'Couldn’t approve it. Please try again.' })}
+            onClick={() => run(() => approveProductVideo(row.productId, pending.uploadedAt, row.measure?.code ?? ''), { keepPendingOnSuccess: true, onError: (e) => onError(e) ?? 'Couldn’t approve it. Please try again.' })}
           >
             {busy ? 'Approving…' : 'Approve'}
           </button>
