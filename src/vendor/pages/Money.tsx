@@ -127,6 +127,12 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
           <dd>{cedis(totals.commissionOnPaidOrders)}</dd>
           <dt>MarketiX {summary.commissionPercent}% on cash orders</dt>
           <dd>{cedis(totals.commissionOnCashOrders)}</dd>
+          {totals.promoterCommission > 0 && (
+            <>
+              <dt>Paid to promoters</dt>
+              <dd>{cedis(totals.promoterCommission)}</dd>
+            </>
+          )}
         </dl>
         <p className={styles.fieldHint}>
           We keep {summary.commissionPercent}% of what your items sell for. Delivery fees are all yours, and we pay the Paystack fees.
@@ -346,10 +352,14 @@ function Statement() {
 function EntryRow({ entry, now }: { entry: LedgerEntry; now: number }) {
   const d = entry.details
   const detail =
-    entry.type === 'ORDER_EARNING' && d
-      ? `Items ${cedis(d.items)} − ${cedis(d.commission)} commission + ${cedis(d.deliveryFee)} delivery`
-      : entry.type === 'CASH_COMMISSION' && d
-        ? `${cedis(d.commission)} on ${cedis(d.items)} of items paid in cash`
+    d && 'items' in d
+      ? entry.type === 'ORDER_EARNING'
+        ? `Items ${cedis(d.items)} − ${cedis(d.commission)} commission + ${cedis(d.deliveryFee)} delivery`
+        : entry.type === 'CASH_COMMISSION'
+          ? `${cedis(d.commission)} on ${cedis(d.items)} of items paid in cash`
+          : null
+      : d && 'promoterId' in d
+        ? `${d.promoterName ?? 'A promoter'} brought this customer: ${d.ratePercent}%${d.base !== null ? ` of ${cedis(d.base)}` : ''}`
         : null
   const heldUntil = entry.availableAt && new Date(entry.availableAt).getTime() > now ? entry.availableAt : null
 
