@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 import { BackLink } from '@/components/BackLink/BackLink'
 import { SearchField } from '@/components/FilterControls/FilterControls'
 import { PeriodFilter } from '@/components/FilterControls/PeriodFilter'
+import { FilterTabs } from '@/components/FilterTabs/FilterTabs'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { StatusBadge } from '@/components/StatusBadge/StatusBadge'
 import { useAsync } from '@/hooks/useAsync'
@@ -88,20 +89,13 @@ function VendorOrders({ vendorId }: { vendorId: string }) {
 
       {data && <OrderSummaryTiles summary={data.summary} />}
 
-      <div className={page.tabs} role="group" aria-label="Filter orders">
-        {SHOP_ORDER_TABS.map((t) => (
-          <button
-            key={t.key}
-            className={t.key === tab.key ? page.tabActive : page.tab}
-            type="button"
-            aria-pressed={t.key === tab.key}
-            onClick={() => updateParams({ tab: t.key === DEFAULT_TAB.key ? null : t.key, page: null })}
-          >
-            {t.label}
-            {data && <span className={page.tabCount}>{data.counts[t.key]}</span>}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Filter orders"
+        tabs={SHOP_ORDER_TABS}
+        active={tab.key}
+        count={(t) => data?.counts[t.key]}
+        onSelect={(key) => updateParams({ tab: key === DEFAULT_TAB.key ? null : key, page: null })}
+      />
 
       <section className={table.panel} aria-label={`${tab.label} orders`}>
         <div className={orders.isFetching && data ? table.loading : undefined}>

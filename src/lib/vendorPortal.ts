@@ -1,5 +1,5 @@
 /**
- * The vendor onboarding API (see VENDOR_ONBOARDING_API.md). Every call acts on the logged-in
+ * The vendor onboarding API (see VENDOR_ONBOARDING_API.md in the API repo). Every call acts on the logged-in
  * vendor's own shop; the backend takes the vendor from the access token.
  */
 import { api, apiBlob, ApiError, type ApiPage, apiRequest, apiUrl, isNotFound } from './api'

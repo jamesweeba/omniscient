@@ -2,20 +2,21 @@ import { useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Badge } from '@/components/Badge/Badge'
 import { SearchField } from '@/components/FilterControls/FilterControls'
+import { FilterTabs } from '@/components/FilterTabs/FilterTabs'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { StatCard, StatGrid } from '@/components/StatCard/StatCard'
-import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlState'
 import { cedis, formatDateTime } from '@/lib/format'
-import { fetchAllPayouts, fetchPayoutsOverview, fetchVendorBalances, PAYOUT_STATUS, payoutSourceLabel, retryPayout, type AdminPayout, type PayoutStatusFilter, type VendorBalance } from '@/lib/payouts'
+import { fetchAllPayouts, fetchPayoutsOverview, fetchVendorBalances, payoutSourceLabel, retryPayout, type AdminPayout, type PayoutStatusFilter, type VendorBalance } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import { fetchPromoterPayouts } from '@/lib/promotersAdmin'
 import page from '@/styles/page.module.css'
 import table from '@/styles/table.module.css'
 import { PromoterPayoutsTable } from '../Promoters/PromoterPayoutsTable'
 import type { VendorLinkState } from '../VendorReview/VendorReview'
+import { PayoutCells } from './PayoutCells'
 import styles from './Payouts.module.css'
 
 const PAGE_SIZE = 10
@@ -45,6 +46,9 @@ export function Payouts() {
 
   const overview = useAsync(fetchPayoutsOverview, { live: true })
   const summary = overview.status === 'success' ? overview.data : null
+
+  const onPage = (p: number) => updateParams({ page: p > 1 ? String(p) : null })
+  const onStatus = (s: PayoutStatusFilter) => updateParams({ status: s === 'all' ? null : s, page: null })
 
   return (
     <>
@@ -90,38 +94,31 @@ export function Payouts() {
         </StatGrid>
       )}
 
-      <div className={page.tabs} role="group" aria-label="View">
-        {VIEWS.map((v) => (
-          <button
-            key={v.key}
-            type="button"
-            className={v.key === view ? page.tabActive : page.tab}
-            aria-pressed={v.key === view}
-            onClick={() => updateParams({ view: v.key === 'balances' ? null : v.key, status: null, page: null })}
-          >
-            {v.label}
-            {v.key === 'payouts' && summary && summary.failedPayouts > 0 && <span className={page.tabCount}>{summary.failedPayouts} failed</span>}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="View"
+        tabs={VIEWS}
+        active={view}
+        count={(v) => v.key === 'payouts' && summary && summary.failedPayouts > 0 && `${summary.failedPayouts} failed`}
+        onSelect={(key) => updateParams({ view: key === 'balances' ? null : key, status: null, page: null })}
+      />
 
       {view === 'balances' ? (
-        <BalancesTable search={search} pageNumber={pageNumber} onPage={(p) => updateParams({ page: p > 1 ? String(p) : null })} />
+        <BalancesTable search={search} pageNumber={pageNumber} onPage={onPage} />
       ) : view === 'promoters' ? (
         <PromoterPayouts
           search={search}
           status={status}
           pageNumber={pageNumber}
-          onStatus={(s) => updateParams({ status: s === 'all' ? null : s, page: null })}
-          onPage={(p) => updateParams({ page: p > 1 ? String(p) : null })}
+          onStatus={onStatus}
+          onPage={onPage}
         />
       ) : (
         <PayoutsTable
           search={search}
           status={status}
           pageNumber={pageNumber}
-          onStatus={(s) => updateParams({ status: s === 'all' ? null : s, page: null })}
-          onPage={(p) => updateParams({ page: p > 1 ? String(p) : null })}
+          onStatus={onStatus}
+          onPage={onPage}
         />
       )}
     </>
@@ -258,12 +255,6 @@ function PayoutsTable({ search, status, pageNumber, onStatus, onPage }: ListProp
 }
 
 function PayoutRow({ payout }: { payout: AdminPayout }) {
-  const { pending, error, run } = useAction()
-  const display = PAYOUT_STATUS[payout.status]
-
-  // Reloads the page's data on success.
-  const retry = () => run(() => retryPayout(payout.id), { fallback: 'Couldn’t retry. Please try again.' })
-
   return (
     <tr>
       <td className={table.nowrap}>
@@ -280,32 +271,7 @@ function PayoutRow({ payout }: { payout: AdminPayout }) {
           <span className={table.secondary}>{payout.tenant.ref}</span>
         </div>
       </td>
-      <td className={table.nowrap}>
-        <strong>{cedis(payout.amount)}</strong>
-      </td>
-      <td className={table.nowrap}>
-        <div className={table.stack}>
-          <span>{formatPhone(payout.momoNumber, 'local')}</span>
-          {payout.momoName && <span className={table.secondary}>{payout.momoName}</span>}
-        </div>
-      </td>
-      <td>
-        <div className={table.stack}>
-          <Badge tone={payout.superseded && payout.status === 'FAILED' ? 'neutral' : display.tone}>
-            {payout.superseded && payout.status === 'FAILED' ? 'Failed · sent again later' : display.label}
-          </Badge>
-          {payout.status === 'SUCCESS' && payout.paidAt && <span className={table.secondary}>{formatDateTime(payout.paidAt)}</span>}
-          {payout.failureReason && <span className={`${table.secondary} ${table.warning}`}>{payout.failureReason}</span>}
-          {error && <span className={`${table.secondary} ${table.warning}`} role="alert">{error}</span>}
-        </div>
-      </td>
-      <td className={table.actionCell}>
-        {payout.status === 'FAILED' && !payout.superseded && (
-          <button className={table.rowButton} type="button" disabled={pending} onClick={retry}>
-            {pending ? 'Retrying…' : 'Retry'}
-          </button>
-        )}
-      </td>
+      <PayoutCells payout={payout} retry={() => retryPayout(payout.id)} />
     </tr>
   )
 }

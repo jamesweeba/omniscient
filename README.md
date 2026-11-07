@@ -1,32 +1,21 @@
-# React + TypeScript + Vite
+# MarketiX web app
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The vendor app and the MarketiX admin app, in React 19 + Vite. It talks to the MarketiX API
+(the `whatsAppFlows` repo).
 
-Currently, two official plugins are available:
+## Run it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev     # http://localhost:5173; /api goes to the API on localhost:3000
+npm run build   # type-check and build to dist/
+npm run lint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## API docs
+
+The API repo owns the API docs, so there is one copy to keep up to date:
+
+- `UI_API_GUIDE.md`: every endpoint the web app calls.
+- `VENDOR_ONBOARDING_API.md`: vendor sign-up and onboarding.
+- `VIDEO_SPEC.md`, `PROMOTERS_SPEC.md`: product videos and promoters.

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { SearchField } from '@/components/FilterControls/FilterControls'
+import { FilterTabs } from '@/components/FilterTabs/FilterTabs'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -71,20 +72,13 @@ export function ReviewQueue() {
 
       {summary.status === 'success' && <SummaryCards summary={summary.data} oldestWaiting={oldestWaiting ?? null} />}
 
-      <div className={page.tabs} role="group" aria-label="Filter by status">
-        {QUEUE_FILTERS.map((f, index) => (
-          <button
-            key={f.key}
-            className={f.key === filter.key ? page.tabActive : page.tab}
-            type="button"
-            aria-pressed={f.key === filter.key}
-            onClick={() => update({ show: index === 0 ? null : f.key, page: null })}
-          >
-            {f.label}
-            {queue.status === 'success' && <span className={page.tabCount}>{count(f.statuses)}</span>}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Filter by status"
+        tabs={QUEUE_FILTERS}
+        active={filter.key}
+        count={(f) => queue.status === 'success' && count(f.statuses)}
+        onSelect={(key, index) => update({ show: index === 0 ? null : key, page: null })}
+      />
 
       <section className={table.panel} aria-label={filter.label}>
         <VendorTable vendors={visible} emptyMessage={emptyMessage} />

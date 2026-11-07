@@ -36,6 +36,4 @@ export const DOCUMENT_SLOTS = [
   },
 ] as const
 
-export type DocumentSlotId = (typeof DOCUMENT_SLOTS)[number]['id']
-
 export const REQUIRED_DOCUMENTS = DOCUMENT_SLOTS.filter((slot) => !slot.optional)

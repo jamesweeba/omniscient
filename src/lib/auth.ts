@@ -17,13 +17,10 @@ export interface SignupInput extends Credentials {
 /** The two sides of the app and who may use each. */
 export type AppArea = 'admin' | 'vendor'
 
-/**
- * Roles allowed in each area. The API doc calls the vendor role SHOP_OWNER; the running
- * backend currently sends VENDOR. Both are accepted.
- */
+/** Roles allowed in each area. */
 const AREA_ROLES: Record<AppArea, readonly UserRole[]> = {
   admin: ['SUPER_ADMIN'],
-  vendor: ['SHOP_OWNER', 'VENDOR'],
+  vendor: ['VENDOR'],
 }
 
 const WRONG_AREA: Record<AppArea, string> = {

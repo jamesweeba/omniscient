@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { SearchField, SelectField } from '@/components/FilterControls/FilterControls'
+import { FilterTabs } from '@/components/FilterTabs/FilterTabs'
 import { Pagination } from '@/components/Pagination/Pagination'
 import { useAsync } from '@/hooks/useAsync'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -91,20 +92,13 @@ export function Vendors() {
         </div>
       </header>
 
-      <div className={page.tabs} role="group" aria-label="Filter by status">
-        {VENDOR_TABS.map((t) => (
-          <button
-            key={t.key}
-            className={t.key === tab.key ? page.tabActive : page.tab}
-            type="button"
-            aria-pressed={t.key === tab.key}
-            onClick={() => updateParams({ tab: t.key === DEFAULT_TAB.key ? null : t.key, page: null })}
-          >
-            {t.label}
-            {data && <span className={page.tabCount}>{data.counts[t.key]}</span>}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Filter by status"
+        tabs={VENDOR_TABS}
+        active={tab.key}
+        count={(t) => data?.counts[t.key]}
+        onSelect={(key) => updateParams({ tab: key === DEFAULT_TAB.key ? null : key, page: null })}
+      />
 
       <section className={table.panel} aria-label={`${tab.label} vendors`}>
         <div className={vendors.isFetching && data ? table.loading : undefined}>
