@@ -29,6 +29,7 @@ const Vendors = page(() => import('@/pages/Vendors/Vendors'), 'Vendors')
 const VendorLayout = page(() => import('@/vendor/VendorLayout'), 'VendorLayout')
 const Documents = page(() => import('@/vendor/pages/Documents'), 'Documents')
 const Money = page(() => import('@/vendor/pages/Money'), 'Money')
+const Promoters = page(() => import('@/vendor/pages/Promoters'), 'Promoters')
 const NewOrder = page(() => import('@/vendor/pages/NewOrder'), 'NewOrder')
 const OrderView = page(() => import('@/vendor/pages/OrderView'), 'OrderView')
 const ProductEditor = page(() => import('@/vendor/pages/ProductEditor'), 'ProductEditor')
@@ -75,6 +76,7 @@ function App() {
                   <Route path="orders/new" element={<NewOrder />} />
                   <Route path="orders/:orderId" element={<OrderView />} />
                   <Route path="money" element={<Money />} />
+                  <Route path="promoters" element={<Promoters />} />
                 </Route>
               </Route>
 

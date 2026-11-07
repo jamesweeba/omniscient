@@ -182,6 +182,8 @@ export interface Product {
   inStock: boolean
   note: string | null
   measures: Measure[]
+  /** Promoter commission for this product's links, whole percent. Null: the shop's rate. */
+  promoterRate: number | null
 }
 
 export interface ProductInput {
@@ -191,6 +193,8 @@ export interface ProductInput {
   inStock?: boolean
   note?: string
   measures?: Measure[]
+  /** Null: use the shop's promoter rate. */
+  promoterRate?: number | null
 }
 
 export const MAX_MEASURES = 10

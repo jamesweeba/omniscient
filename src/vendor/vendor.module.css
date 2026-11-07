@@ -67,22 +67,39 @@
   top: 60px;
   z-index: 1;
   display: flex;
-  justify-content: center;
+  /* On narrow phones the tabs scroll sideways instead of widening the page. */
+  justify-content: safe center;
   gap: 4px;
   padding: 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
 
+.nav::-webkit-scrollbar {
+  display: none;
+}
+
 .navLink {
-  flex: 0 1 120px;
+  flex: 0 0 auto;
+  min-width: 120px;
   padding: 12px 4px;
+  white-space: nowrap;
   font-size: 15px;
   font-weight: 600;
   text-align: center;
   color: var(--color-text-muted);
   text-decoration: none;
   border-bottom: 3px solid transparent;
+}
+
+@media (max-width: 600px) {
+  .navLink {
+    min-width: 0;
+    padding: 12px 8px;
+    font-size: 14px;
+  }
 }
 
 .navLinkActive {

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router'
 import { ErrorBoundary } from '@/components/ErrorBoundary/ErrorBoundary'
 import { LogoMark } from '@/components/LogoMark/LogoMark'
@@ -17,6 +17,7 @@ const NAV = [
   { to: '/vendor/products', label: 'Products' },
   { to: '/vendor/orders', label: 'Orders' },
   { to: '/vendor/money', label: 'Money' },
+  { to: '/vendor/promoters', label: 'Promoters' },
   { to: '/vendor/shop', label: 'Shop' },
 ]
 
@@ -33,6 +34,12 @@ export function VendorLayout() {
   if (fresh !== undefined && fresh !== lastShop) setLastShop(fresh)
   const shop = fresh ?? lastShop
   const waiting = shop?.status === 'STOCKED' || shop?.status === 'UNDER_REVIEW'
+  const navRef = useRef<HTMLElement>(null)
+
+  // On a phone the tabs scroll sideways: keep the current page's tab in view.
+  useEffect(() => {
+    navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [pathname, shop])
 
 
   useEffect(() => {
@@ -56,7 +63,7 @@ export function VendorLayout() {
         </button>
       </header>
       {shop && (
-        <nav className={styles.nav} aria-label="Vendor">
+        <nav ref={navRef} className={styles.nav} aria-label="Vendor">
           {NAV.map(({ to, label }) => (
             <NavLink key={to} to={to} end={to === '/vendor'} className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
               {label}
