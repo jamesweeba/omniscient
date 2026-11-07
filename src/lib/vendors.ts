@@ -25,18 +25,21 @@ export interface AdminSummary {
   activeShops: number
   /** Shops with a banner waiting for an admin's approval. */
   bannersToApprove: number
+  /** Product videos waiting for an admin's approval. */
+  videosToApprove: number
 }
 
 /** GET /admin/summary: the four dashboard tiles (also the sidebar badges). */
 export const fetchAdminSummary = (): Promise<AdminSummary> =>
   api
-    .get<{ waiting: number; moreInfo: number; freeNumbers: number; activeShops: number; pendingBanners: number }>('/admin/summary')
+    .get<{ waiting: number; moreInfo: number; freeNumbers: number; activeShops: number; pendingBanners: number; pendingVideos?: number }>('/admin/summary')
     .then((s) => ({
       waitingForReview: s.waiting,
       moreInfoRequested: s.moreInfo,
       freeWhatsAppNumbers: s.freeNumbers,
       activeShops: s.activeShops,
       bannersToApprove: s.pendingBanners,
+      videosToApprove: s.pendingVideos ?? 0,
     }))
 
 export interface QueuedVendor {
