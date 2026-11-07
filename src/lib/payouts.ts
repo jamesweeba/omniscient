@@ -6,7 +6,7 @@ import { api, queryString, type ApiPage } from './api'
 export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'
 export type PayoutStatusFilter = 'all' | 'pending' | 'processing' | 'success' | 'failed'
 export type PayoutSource = 'VENDOR' | 'ADMIN' | 'AUTOMATIC'
-export type LedgerEntryType = 'ORDER_EARNING' | 'CASH_COMMISSION' | 'PAYOUT' | 'PAYOUT_REVERSAL'
+export type LedgerEntryType = 'ORDER_EARNING' | 'CASH_COMMISSION' | 'PROMOTER_COMMISSION' | 'PAYOUT' | 'PAYOUT_REVERSAL'
 
 export interface Payout {
   id: string
@@ -38,7 +38,11 @@ export interface LedgerEntry {
   amount: number
   orderId: string | null
   orderNumber: string | null
-  details: { items: number; commission: number; deliveryFee: number } | null
+  /** Orders: the split. Promoter commission: who, at what rate, on what. */
+  details:
+    | { items: number; commission: number; deliveryFee: number }
+    | { promoterId: string; promoterName: string | null; linkCode: string; ratePercent: number; base: number | null }
+    | null
   /** Card earnings are held until then before they can be withdrawn. Null: right away. */
   availableAt?: string | null
   createdAt: string
@@ -54,7 +58,7 @@ export interface ShopMoney {
   onHold: { amount: number; nextReleaseAt: string | null; days: number }
   /** Sent to Paystack, not landed yet. */
   inFlight: number
-  totals: { earned: number; commissionOnPaidOrders: number; commissionOnCashOrders: number; paidOut: number }
+  totals: { earned: number; commissionOnPaidOrders: number; commissionOnCashOrders: number; promoterCommission: number; paidOut: number }
   /** Paid, delivered orders the buyer hasn't confirmed yet: earned once they do. */
   awaitingConfirmation: { count: number; amount: number; orders: { id: string; orderNumber: string; vendorShare: number; deliveredAt: string }[] }
   lastPayout: Payout | null
@@ -218,6 +222,7 @@ export function payoutSourceLabel(p: Pick<Payout, 'source' | 'initiatedById'>): 
 export const LEDGER_ENTRY: Record<LedgerEntryType, string> = {
   ORDER_EARNING: 'Order paid out',
   CASH_COMMISSION: 'Commission on cash order',
+  PROMOTER_COMMISSION: 'Promoter commission',
   PAYOUT: 'Withdrawn to MoMo',
   PAYOUT_REVERSAL: 'Withdrawal failed: back in balance',
 }

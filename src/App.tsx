@@ -20,6 +20,8 @@ const AuditLog = page(() => import('@/pages/AuditLog/AuditLog'), 'AuditLog')
 const NumberPool = page(() => import('@/pages/NumberPool/NumberPool'), 'NumberPool')
 const Orders = page(() => import('@/pages/Orders/Orders'), 'Orders')
 const Payouts = page(() => import('@/pages/Payouts/Payouts'), 'Payouts')
+const AdminPromoters = page(() => import('@/pages/Promoters/Promoters'), 'Promoters')
+const AdminPromoterDetail = page(() => import('@/pages/Promoters/PromoterDetail'), 'PromoterDetail')
 const ReviewQueue = page(() => import('@/pages/ReviewQueue/ReviewQueue'), 'ReviewQueue')
 const VendorOrdersPage = page(() => import('@/pages/VendorOrders/VendorOrders'), 'VendorOrdersPage')
 const VendorReviewPage = page(() => import('@/pages/VendorReview/VendorReview'), 'VendorReviewPage')
@@ -29,6 +31,7 @@ const Vendors = page(() => import('@/pages/Vendors/Vendors'), 'Vendors')
 const VendorLayout = page(() => import('@/vendor/VendorLayout'), 'VendorLayout')
 const Documents = page(() => import('@/vendor/pages/Documents'), 'Documents')
 const Money = page(() => import('@/vendor/pages/Money'), 'Money')
+const Promoters = page(() => import('@/vendor/pages/Promoters'), 'Promoters')
 const NewOrder = page(() => import('@/vendor/pages/NewOrder'), 'NewOrder')
 const OrderView = page(() => import('@/vendor/pages/OrderView'), 'OrderView')
 const ProductEditor = page(() => import('@/vendor/pages/ProductEditor'), 'ProductEditor')
@@ -57,6 +60,8 @@ function App() {
                   <Route path="orders/:vendorId" element={<VendorOrdersPage />} />
                   <Route path="audit-log" element={<AuditLog />} />
                   <Route path="payouts" element={<Payouts />} />
+                  <Route path="promoters" element={<AdminPromoters />} />
+                  <Route path="promoters/:promoterId" element={<AdminPromoterDetail />} />
                 </Route>
               </Route>
 
@@ -75,6 +80,7 @@ function App() {
                   <Route path="orders/new" element={<NewOrder />} />
                   <Route path="orders/:orderId" element={<OrderView />} />
                   <Route path="money" element={<Money />} />
+                  <Route path="promoters" element={<Promoters />} />
                 </Route>
               </Route>
 

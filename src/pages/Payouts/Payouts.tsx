@@ -11,8 +11,10 @@ import { pageParam, useSearchParamInput, useUrlParams } from '@/hooks/useUrlStat
 import { cedis, formatDateTime } from '@/lib/format'
 import { fetchAllPayouts, fetchPayoutsOverview, fetchVendorBalances, PAYOUT_STATUS, payoutSourceLabel, retryPayout, type AdminPayout, type PayoutStatusFilter, type VendorBalance } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
+import { fetchPromoterPayouts } from '@/lib/promotersAdmin'
 import page from '@/styles/page.module.css'
 import table from '@/styles/table.module.css'
+import { PromoterPayoutsTable } from '../Promoters/PromoterPayoutsTable'
 import type { VendorLinkState } from '../VendorReview/VendorReview'
 import styles from './Payouts.module.css'
 
@@ -21,6 +23,7 @@ const PAGE_SIZE = 10
 const VIEWS = [
   { key: 'balances', label: 'Vendor balances' },
   { key: 'payouts', label: 'Payouts' },
+  { key: 'promoters', label: 'Promoter payouts' },
 ] as const
 type View = (typeof VIEWS)[number]['key']
 
@@ -36,7 +39,7 @@ export function Payouts() {
   usePageTitle('Payouts')
   const [params, updateParams] = useUrlParams()
   const [searchInput, setSearchInput, search] = useSearchParamInput(params, updateParams)
-  const view: View = params.get('view') === 'payouts' ? 'payouts' : 'balances'
+  const view: View = VIEWS.find((v) => v.key === params.get('view'))?.key ?? 'balances'
   const status = STATUS_FILTERS.find((f) => f.key === params.get('status'))?.key ?? 'all'
   const pageNumber = pageParam(params)
 
@@ -55,7 +58,12 @@ export function Payouts() {
           </p>
         </div>
         <div className={page.toolbar}>
-          <SearchField label="Search" placeholder={view === 'balances' ? 'Shop, owner, ref or MoMo' : 'Shop, MoMo or reference'} value={searchInput} onChange={setSearchInput} />
+          <SearchField
+            label="Search"
+            placeholder={view === 'balances' ? 'Shop, owner, ref or MoMo' : view === 'promoters' ? 'Promoter, phone or reference' : 'Shop, MoMo or reference'}
+            value={searchInput}
+            onChange={setSearchInput}
+          />
         </div>
       </header>
 
@@ -99,6 +107,14 @@ export function Payouts() {
 
       {view === 'balances' ? (
         <BalancesTable search={search} pageNumber={pageNumber} onPage={(p) => updateParams({ page: p > 1 ? String(p) : null })} />
+      ) : view === 'promoters' ? (
+        <PromoterPayouts
+          search={search}
+          status={status}
+          pageNumber={pageNumber}
+          onStatus={(s) => updateParams({ status: s === 'all' ? null : s, page: null })}
+          onPage={(p) => updateParams({ page: p > 1 ? String(p) : null })}
+        />
       ) : (
         <PayoutsTable
           search={search}
@@ -291,5 +307,33 @@ function PayoutRow({ payout }: { payout: AdminPayout }) {
         )}
       </td>
     </tr>
+  )
+}
+
+function PromoterPayouts({ search, status, pageNumber, onStatus, onPage }: ListProps & { status: PayoutStatusFilter; onStatus: (s: PayoutStatusFilter) => void }) {
+  // Promoter payouts have no separate "pending" filter: pending ones are "on its way".
+  const promoterStatus = status === 'pending' ? 'processing' : status
+  const query = useMemo(() => ({ search: search || undefined, status: promoterStatus, page: pageNumber, pageSize: PAGE_SIZE }), [search, promoterStatus, pageNumber])
+  const load = useCallback(() => fetchPromoterPayouts(query), [query])
+  const result = useAsync(load, { live: true })
+  const data = result.status === 'success' ? result.data : null
+  const empty = result.status === 'loading' ? 'Loading…' : result.status === 'error' ? result.error : 'No promoter payouts match.'
+
+  return (
+    <>
+      <div className={styles.chips} role="group" aria-label="Filter by status">
+        {STATUS_FILTERS.map((f) => (
+          <button key={f.key} type="button" className={f.key === status ? styles.chipActive : styles.chip} aria-pressed={f.key === status} onClick={() => onStatus(f.key)}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <section className={table.panel} aria-label="Promoter payouts">
+        <div className={result.isFetching && data ? table.loading : undefined}>
+          <PromoterPayoutsTable payouts={data?.data ?? []} emptyMessage={empty} />
+        </div>
+        <Pagination page={pageNumber} pageSize={PAGE_SIZE} total={data?.meta.total ?? 0} onPageChange={onPage} />
+      </section>
+    </>
   )
 }

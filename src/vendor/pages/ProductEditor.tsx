@@ -56,7 +56,11 @@ interface Row {
 const COMMON_MEASURES = ['Olonka', 'Half basket', 'Basket', 'Bag', 'Half bag', 'Bunch', 'Tin', 'Each']
 const MAX_MEASURE_DESCRIPTION = 300
 
-type Errors = Partial<Record<'name' | 'categoryId' | 'rows', string>>
+type Errors = Partial<Record<'name' | 'categoryId' | 'rows' | 'promoterRate', string>>
+
+/** The range the API accepts for a product's promoter commission. */
+const PROMOTER_RATE_MIN = 1
+const PROMOTER_RATE_MAX = 20
 
 /** The photo as it will be after saving. */
 type PhotoChange = { kind: 'keep' } | { kind: 'new'; blob: Blob; name: string; preview: string } | { kind: 'remove' }
@@ -99,6 +103,7 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
   const [rows, setRows] = useState<Row[]>(() => rowsFrom(saved))
   const [inStock, setInStock] = useState(saved?.inStock ?? true)
   const [note, setNote] = useState(saved?.note ?? '')
+  const [promoterRate, setPromoterRate] = useState(saved?.promoterRate ? String(saved.promoterRate) : '')
   const [photo, setPhoto] = useState<PhotoChange>({ kind: 'keep' })
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(routeState?.photoError ?? null)
@@ -125,6 +130,11 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
       next.rows = 'Each option needs a different name.'
     }
 
+    const rate = promoterRate.trim() ? Number(promoterRate) : null
+    if (rate !== null && (!Number.isInteger(rate) || rate < PROMOTER_RATE_MIN || rate > PROMOTER_RATE_MAX)) {
+      next.promoterRate = `Enter a whole number from ${PROMOTER_RATE_MIN} to ${PROMOTER_RATE_MAX}, or leave it empty.`
+    }
+
     setErrors(next)
     if (Object.keys(next).length) return null
 
@@ -136,6 +146,7 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
       measures,
       inStock,
       note: note.trim(),
+      promoterRate: rate,
     }
   }
 
@@ -357,6 +368,26 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
             Note <span className={styles.optional}>· optional</span>
           </span>
           <input className={styles.input} placeholder="Fresh from Techiman" value={note} onChange={(e) => setNote(e.target.value)} />
+        </label>
+
+        <label className={styles.field}>
+          <span>
+            Promoter commission (%) <span className={styles.optional}>· optional</span>
+          </span>
+          <input
+            className={errors.promoterRate ? styles.inputInvalid : styles.input}
+            inputMode="numeric"
+            placeholder="Your shop rate"
+            value={promoterRate}
+            onChange={(e) => edit('promoterRate', setPromoterRate)(e.target.value.replace(/[^\d]/g, ''))}
+          />
+          {errors.promoterRate ? (
+            <span className={styles.fieldError}>{errors.promoterRate}</span>
+          ) : (
+            <span className={styles.fieldHint}>
+              What promoters earn on this product, from {PROMOTER_RATE_MIN}% to {PROMOTER_RATE_MAX}%. Leave it empty to use the rate on your Promoters page.
+            </span>
+          )}
         </label>
 
         <div className={styles.field} role="group" aria-labelledby="photo-label">

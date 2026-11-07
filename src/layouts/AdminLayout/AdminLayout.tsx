@@ -22,7 +22,10 @@ export function AdminLayout() {
   // does this for the window).
   const { pathname } = useLocation()
   const contentRef = useRef<HTMLElement>(null)
-  useEffect(() => contentRef.current?.scrollTo(0, 0), [pathname])
+  // Braces matter: newer browsers return a Promise from scrollTo, and an effect may only return a cleanup function.
+  useEffect(() => {
+    contentRef.current?.scrollTo(0, 0)
+  }, [pathname])
 
   return (
     <div className={styles.shell}>
@@ -55,6 +58,7 @@ export function AdminLayout() {
           <SidebarLink to={failedPayouts ? '/payouts?view=payouts&status=failed' : '/payouts'} label="Payouts" icon={<WalletIcon />}>
             {failedPayouts > 0 && <span className={styles.badgeWarning}>{failedPayouts} failed</span>}
           </SidebarLink>
+          <SidebarLink to="/promoters" label="Promoters" icon={<MegaphoneIcon />} />
           <SidebarLink to="/audit-log" label="Audit log" icon={<LogIcon />} />
         </div>
 
@@ -127,6 +131,7 @@ const SECTIONS: Record<string, string> = {
   'whatsapp-numbers': 'WhatsApp numbers',
   orders: 'Orders',
   payouts: 'Payouts',
+  promoters: 'Promoters',
   'audit-log': 'Audit log',
 }
 
@@ -220,6 +225,17 @@ function WalletIcon() {
       <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v3" />
       <path d="M4 7.5V17a2 2 0 0 0 2 2h14V8H6.5A2.5 2.5 0 0 1 4 7.5" />
       <path d="M16 13.5h.01" />
+    </NavIcon>
+  )
+}
+
+/** A megaphone: people who spread the word for shops. */
+function MegaphoneIcon() {
+  return (
+    <NavIcon>
+      <path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1z" />
+      <path d="M17 9a4 4 0 0 1 0 6" />
+      <path d="M8 15l1 4h2" />
     </NavIcon>
   )
 }

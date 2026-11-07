@@ -26,6 +26,9 @@ export type AuditAction =
   | 'PAYOUTS_PAUSED'
   | 'PAYOUTS_RESUMED'
   | 'ORDER_RELEASED'
+  | 'PROMOTER_SUSPENDED'
+  | 'PROMOTER_REINSTATED'
+  | 'PROMOTER_PAYOUT_RETRIED'
 
 export interface AuditEntry {
   id: string
