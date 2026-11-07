@@ -20,7 +20,7 @@ interface DocumentViewerProps {
 export function DocumentViewer({ vendorId, documents, initialIndex, compare, onClose }: DocumentViewerProps) {
   const [index, setIndex] = useState(initialIndex)
   const doc = documents[index]
-  const file = useDocumentFile(vendorId, doc?.id)
+  const file = useDocumentFile(vendorId, doc)
   const hasPrevious = index > 0
   const hasNext = index < documents.length - 1
 
@@ -86,5 +86,17 @@ export function DocumentViewer({ vendorId, documents, initialIndex, compare, onC
 }
 
 /** Fetches a document with the token and exposes it as an object URL (revoked on change). */
-const useDocumentFile = (vendorId: string, documentId: string | undefined) =>
-  useBlobFile(documentId ? `${vendorId}:${documentId}` : null, () => fetchVendorDocument(vendorId, documentId!))
+/** The only kinds of document the viewer shows; anything else is refused, never rendered. */
+const VIEWABLE_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+
+/**
+ * A document as a blob URL of a fixed, safe type. Blob URLs run in this app's origin, so the
+ * blob's type is set here from the allowlist, never taken from the download: a file that is
+ * really HTML or SVG can then only ever show as a broken PDF or image, never run script.
+ */
+const useDocumentFile = (vendorId: string, doc: VendorDocument | undefined) =>
+  useBlobFile(doc ? `${vendorId}:${doc.id}` : null, async () => {
+    if (!VIEWABLE_TYPES.has(doc!.mimeType)) throw new Error('This file type can’t be previewed.')
+    const blob = await fetchVendorDocument(vendorId, doc!.id)
+    return new Blob([blob], { type: doc!.mimeType })
+  })
