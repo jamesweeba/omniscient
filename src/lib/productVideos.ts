@@ -24,37 +24,50 @@ const relative = (url: string) => url.replace(/^\/api\/v1/, '')
 
 export const fetchVideoFile = (url: string) => apiBlob(relative(url))
 
-// Vendor
+// Vendor. `measure`: a measure's code for that measure's video; '' (the default) for the whole product.
 
-export const fetchProductVideo = (productId: string) => api.get<ProductVideo>(`/products/${productId}/video`)
+const measureQuery = (measure: string) => (measure ? `?measure=${encodeURIComponent(measure)}` : '')
 
-export function uploadProductVideo(productId: string, file: File): Promise<ProductVideo> {
-  const form = new FormData()
-  form.append('file', file, file.name || 'video.mp4')
-  return api.post<ProductVideo>(`/products/${productId}/video`, form)
+/** Every video of a product: the whole product's and each measure's. */
+export interface ProductVideos {
+  product: ProductVideo
+  measures: { code: string; label: string; video: ProductVideo }[]
 }
 
-export const cancelProductVideo = (productId: string) => api.delete<ProductVideo>(`/products/${productId}/video/pending`)
+export const fetchProductVideos = (productId: string) => api.get<ProductVideos>(`/products/${productId}/videos`)
 
-export const removeProductVideo = (productId: string) => api.delete<ProductVideo>(`/products/${productId}/video`)
+export const fetchProductVideo = (productId: string, measure = '') => api.get<ProductVideo>(`/products/${productId}/video${measureQuery(measure)}`)
+
+export function uploadProductVideo(productId: string, file: File, measure = ''): Promise<ProductVideo> {
+  const form = new FormData()
+  form.append('file', file, file.name || 'video.mp4')
+  return api.post<ProductVideo>(`/products/${productId}/video${measureQuery(measure)}`, form)
+}
+
+export const cancelProductVideo = (productId: string, measure = '') => api.delete<ProductVideo>(`/products/${productId}/video/pending${measureQuery(measure)}`)
+
+export const removeProductVideo = (productId: string, measure = '') => api.delete<ProductVideo>(`/products/${productId}/video${measureQuery(measure)}`)
 
 // Admin
 
 export interface WaitingVideo {
   productId: string
   productName: string
+  /** Null: a video of the whole product. */
+  measure: { code: string; label: string } | null
   tenant: { id: string; name: string }
   video: ProductVideo
 }
 
 export const fetchWaitingVideos = (page: number, pageSize: number) => api.get<ApiPage<WaitingVideo>>(`/admin/videos?page=${page}&limit=${pageSize}`)
 
-export const approveProductVideo = (productId: string, uploadedAt: string) =>
-  api.post<ProductVideo>(`/admin/products/${productId}/video/approve`, { uploadedAt })
+export const approveProductVideo = (productId: string, uploadedAt: string, measure = '') =>
+  api.post<ProductVideo>(`/admin/products/${productId}/video/approve${measureQuery(measure)}`, { uploadedAt })
 
-export const rejectProductVideo = (productId: string, uploadedAt: string, reason: string) =>
-  api.post<ProductVideo>(`/admin/products/${productId}/video/reject`, { uploadedAt, reason })
+export const rejectProductVideo = (productId: string, uploadedAt: string, reason: string, measure = '') =>
+  api.post<ProductVideo>(`/admin/products/${productId}/video/reject${measureQuery(measure)}`, { uploadedAt, reason })
 
-export const removeLiveProductVideo = (productId: string, reason: string) => api.post<ProductVideo>(`/admin/products/${productId}/video/remove`, { reason })
+export const removeLiveProductVideo = (productId: string, reason: string, measure = '') =>
+  api.post<ProductVideo>(`/admin/products/${productId}/video/remove${measureQuery(measure)}`, { reason })
 
 export const formatSeconds = (seconds: number | null) => (seconds === null ? '' : `${seconds}s`)
