@@ -1,7 +1,13 @@
 .list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .slot {
@@ -10,7 +16,7 @@
   padding: 16px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: 10px;
 }
 
 .preview {
@@ -51,7 +57,7 @@
 
 .title {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 }
 

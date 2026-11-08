@@ -137,6 +137,8 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
       </div>
       {readOnly && <LockNotice status={lockStatus} what="your orders" />}
 
+      <div className={styles.columns}>
+      <div className={styles.stack}>
       {!readOnly && (next || awaitingMomo) && (
         <section className={`${styles.card} ${view.nextStep}`} aria-label="Next step">
           {awaitingMomo ? (
@@ -201,7 +203,9 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
           </tfoot>
         </table>
       </section>
+      </div>
 
+      <div className={styles.stack}>
       <section className={styles.card} aria-labelledby="buyer">
         <h2 id="buyer" className={styles.cardTitle}>
           Buyer
@@ -320,6 +324,8 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
           </button>
         </section>
       )}
+      </div>
+      </div>
     </>
   )
 }

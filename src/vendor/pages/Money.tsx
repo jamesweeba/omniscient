@@ -7,7 +7,21 @@ import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { cedis, formatDateTime, formatStars, formatWeekdayDateTime, plural } from '@/lib/format'
-import { fetchMyMoney, fetchMySales, fetchMyStatement, formatRating, LEDGER_ENTRY, parseCedis, PAYOUT_STATUS, requestWithdrawal, weekChange, withdrawState, type LedgerEntry, type SalesSummary, type ShopMoney } from '@/lib/payouts'
+import {
+  fetchMyMoney,
+  fetchMySales,
+  fetchMyStatement,
+  formatRating,
+  LEDGER_ENTRY,
+  parseCedis,
+  PAYOUT_STATUS,
+  requestWithdrawal,
+  weekChange,
+  withdrawState,
+  type LedgerEntry,
+  type SalesSummary,
+  type ShopMoney,
+} from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import styles from '../vendor.module.css'
 import money from './Money.module.css'
@@ -38,109 +52,110 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
   const [sent, setSent] = useState<string | null>(null)
 
   return (
-    <>
-      <section className={`${styles.card} ${money.balanceCard}`} aria-label="Balance">
-        <span className={money.balanceLabel}>{owes ? 'You owe MarketiX' : 'Owed to you'}</span>
-        <span className={owes ? money.balanceOwed : money.balance}>{cedis(Math.abs(balance))}</span>
-        <p className={styles.muted}>
-          {owes
-            ? `This is our ${summary.commissionPercent}% on your cash orders. It comes off your balance as buyers confirm new orders.`
-            : `Each order is added here once the buyer confirms they got it. Withdraw it to your MoMo whenever you like, once a day.`}
-        </p>
-        {!owes && onHold.amount > 0 && (
-          <p className={styles.alertInfo}>
-            {cedis(Math.max(available, 0))} can be withdrawn now. {cedis(onHold.amount)} from card payments is on hold for {onHold.days}{' '}
-            days after the buyer confirms
-            {onHold.nextReleaseAt ? `; the next one is ready on ${formatWeekdayDateTime(onHold.nextReleaseAt)}` : ''}.
-          </p>
-        )}
-        {sent && (
-          <p className={styles.alertSuccess} role="status">
-            {sent}
-          </p>
-        )}
-        {!owes && (
-          <>
-            <button className={styles.primary} type="button" disabled={!withdraw.canWithdraw} onClick={() => setWithdrawing(true)}>
-              Withdraw to MoMo
-            </button>
-            {!withdraw.canWithdraw && balance > 0 && <p className={styles.fieldHint}>{withdraw.reason}</p>}
-          </>
-        )}
-        {inFlight > 0 && (
-          <p className={styles.alertInfo}>
-            {cedis(inFlight)} is on its way to your MoMo ({summary.momo.number ? formatPhone(summary.momo.number, 'local') : 'your number'}).
-          </p>
-        )}
-        {lastPayout?.status === 'FAILED' && (
-          <p className={styles.alertWarning}>
-            Your last withdrawal didn’t go through. The money is back in your balance and MarketiX has been told. You can withdraw it
-            again.
-          </p>
-        )}
-      </section>
-
-      {withdrawing && (
-        <WithdrawDialog
-          summary={summary}
-          onClose={() => setWithdrawing(false)}
-          onSent={(amount) => {
-            setWithdrawing(false)
-            setSent(`${cedis(amount)} is on its way to your MoMo. It usually lands within a few minutes.`)
-          }}
-        />
-      )}
-
-      <WithdrawRules summary={summary} />
-
-      <Sales />
-
-      {awaitingConfirmation.count > 0 && (
-        <section className={styles.card} aria-labelledby="waiting">
-          <h2 id="waiting" className={styles.cardTitle}>
-            Waiting for buyers to confirm · {cedis(awaitingConfirmation.amount)}
-          </h2>
+    <div className={styles.columns}>
+      <div className={styles.stack}>
+        <section className={`${styles.card} ${money.balanceCard}`} aria-label="Balance">
+          <span className={money.balanceLabel}>{owes ? 'You owe MarketiX' : 'Owed to you'}</span>
+          <span className={owes ? money.balanceOwed : money.balance}>{cedis(Math.abs(balance))}</span>
           <p className={styles.muted}>
-            These orders are delivered. You’re paid for each one as soon as the buyer taps “I got my order” on WhatsApp.
+            {owes
+              ? `This is our ${summary.commissionPercent}% on your cash orders. It comes off your balance as buyers confirm new orders.`
+              : `Each order is added here once the buyer confirms they got it. Withdraw it to your MoMo whenever you like, once a day.`}
           </p>
-          <ul className={money.waitingList}>
-            {awaitingConfirmation.orders.slice(0, 10).map((o) => (
-              <li key={o.id}>
-                <Link to={`/vendor/orders/${o.id}`}>{o.orderNumber}</Link>
-                <span>{cedis(o.vendorShare)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className={styles.card} aria-labelledby="totals">
-        <h2 id="totals" className={styles.cardTitle}>
-          So far
-        </h2>
-        <dl className={money.totals}>
-          <dt>Earned from MoMo and card orders</dt>
-          <dd>{cedis(totals.earned)}</dd>
-          <dt>Sent to your MoMo</dt>
-          <dd>{cedis(totals.paidOut)}</dd>
-          <dt>MarketiX {summary.commissionPercent}% on MoMo and card orders</dt>
-          <dd>{cedis(totals.commissionOnPaidOrders)}</dd>
-          <dt>MarketiX {summary.commissionPercent}% on cash orders</dt>
-          <dd>{cedis(totals.commissionOnCashOrders)}</dd>
-          {totals.promoterCommission > 0 && (
+          {!owes && onHold.amount > 0 && (
+            <p className={styles.alertInfo}>
+              {cedis(Math.max(available, 0))} can be withdrawn now. {cedis(onHold.amount)} from card payments is on hold for {onHold.days} days after the buyer
+              confirms
+              {onHold.nextReleaseAt ? `; the next one is ready on ${formatWeekdayDateTime(onHold.nextReleaseAt)}` : ''}.
+            </p>
+          )}
+          {sent && (
+            <p className={styles.alertSuccess} role="status">
+              {sent}
+            </p>
+          )}
+          {!owes && (
             <>
-              <dt>Paid to promoters</dt>
-              <dd>{cedis(totals.promoterCommission)}</dd>
+              <button className={styles.primary} type="button" disabled={!withdraw.canWithdraw} onClick={() => setWithdrawing(true)}>
+                Withdraw to MoMo
+              </button>
+              {!withdraw.canWithdraw && balance > 0 && <p className={styles.fieldHint}>{withdraw.reason}</p>}
             </>
           )}
-        </dl>
-        <p className={styles.fieldHint}>
-          We keep {summary.commissionPercent}% of what your items sell for. Delivery fees are all yours, and we pay the Paystack fees.
-        </p>
-      </section>
+          {inFlight > 0 && (
+            <p className={styles.alertInfo}>
+              {cedis(inFlight)} is on its way to your MoMo ({summary.momo.number ? formatPhone(summary.momo.number, 'local') : 'your number'}).
+            </p>
+          )}
+          {lastPayout?.status === 'FAILED' && (
+            <p className={styles.alertWarning}>
+              Your last withdrawal didn’t go through. The money is back in your balance and MarketiX has been told. You can withdraw it again.
+            </p>
+          )}
+        </section>
 
-      <Statement />
-    </>
+        {withdrawing && (
+          <WithdrawDialog
+            summary={summary}
+            onClose={() => setWithdrawing(false)}
+            onSent={(amount) => {
+              setWithdrawing(false)
+              setSent(`${cedis(amount)} is on its way to your MoMo. It usually lands within a few minutes.`)
+            }}
+          />
+        )}
+
+        <Sales />
+
+        <Statement />
+      </div>
+
+      <div className={styles.stack}>
+        <WithdrawRules summary={summary} />
+
+        {awaitingConfirmation.count > 0 && (
+          <section className={styles.card} aria-labelledby="waiting">
+            <h2 id="waiting" className={styles.cardTitle}>
+              Waiting for buyers to confirm · {cedis(awaitingConfirmation.amount)}
+            </h2>
+            <p className={styles.muted}>These orders are delivered. You’re paid for each one as soon as the buyer taps “I got my order” on WhatsApp.</p>
+            <ul className={money.waitingList}>
+              {awaitingConfirmation.orders.slice(0, 10).map((o) => (
+                <li key={o.id}>
+                  <Link to={`/vendor/orders/${o.id}`}>{o.orderNumber}</Link>
+                  <span>{cedis(o.vendorShare)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className={styles.card} aria-labelledby="totals">
+          <h2 id="totals" className={styles.cardTitle}>
+            So far
+          </h2>
+          <dl className={money.totals}>
+            <dt>Earned from MoMo and card orders</dt>
+            <dd>{cedis(totals.earned)}</dd>
+            <dt>Sent to your MoMo</dt>
+            <dd>{cedis(totals.paidOut)}</dd>
+            <dt>MarketiX {summary.commissionPercent}% on MoMo and card orders</dt>
+            <dd>{cedis(totals.commissionOnPaidOrders)}</dd>
+            <dt>MarketiX {summary.commissionPercent}% on cash orders</dt>
+            <dd>{cedis(totals.commissionOnCashOrders)}</dd>
+            {totals.promoterCommission > 0 && (
+              <>
+                <dt>Paid to promoters</dt>
+                <dd>{cedis(totals.promoterCommission)}</dd>
+              </>
+            )}
+          </dl>
+          <p className={styles.fieldHint}>
+            We keep {summary.commissionPercent}% of what your items sell for. Delivery fees are all yours, and we pay the Paystack fees.
+          </p>
+        </section>
+      </div>
+    </div>
   )
 }
 
@@ -175,11 +190,7 @@ function WithdrawDialog({ summary, onClose, onSent }: { summary: ShopMoney; onCl
   }
 
   return (
-    <Dialog
-      title="Withdraw to MoMo"
-      description={`You can withdraw once a day. Available: ${cedis(balance)}.`}
-      onClose={() => !busy && onClose()}
-    >
+    <Dialog title="Withdraw to MoMo" description={`You can withdraw once a day. Available: ${cedis(balance)}.`} onClose={() => !busy && onClose()}>
       <form className={money.withdrawForm} onSubmit={submit} noValidate>
         <label className={styles.field}>
           Amount (GH₵)
@@ -237,10 +248,10 @@ function WithdrawRules({ summary }: { summary: ShopMoney }) {
         </h2>
         <p className={styles.muted}>
           Withdraw any amount from {cedis(minPayout)} up to your balance to your MoMo
-          {momo.number ? ` (${formatPhone(momo.number, 'local')})` : ''}, once a day. A new day starts at midnight. If a withdrawal
-          doesn’t go through, the money comes back to your balance and you can try again the same day. Nothing is sent until you
-          withdraw. Money from card payments can be withdrawn {onHold.days} days after the buyer confirms, in case the card owner
-          disputes the payment. MoMo payments are ready straight away. We’ll message you on WhatsApp when a withdrawal lands.
+          {momo.number ? ` (${formatPhone(momo.number, 'local')})` : ''}, once a day. A new day starts at midnight. If a withdrawal doesn’t go through, the
+          money comes back to your balance and you can try again the same day. Nothing is sent until you withdraw. Money from card payments can be withdrawn{' '}
+          {onHold.days} days after the buyer confirms, in case the card owner disputes the payment. MoMo payments are ready straight away. We’ll message you on
+          WhatsApp when a withdrawal lands.
         </p>
       </div>
     </section>
@@ -307,9 +318,7 @@ function SalesBody({ sales }: { sales: SalesSummary }) {
             {rating.recentLow.map((r) => (
               <li key={r.orderId}>
                 <Link to={`/vendor/orders/${r.orderId}`}>{r.orderNumber}</Link>
-                <span>
-                  {formatStars(r.rating)}
-                </span>
+                <span>{formatStars(r.rating)}</span>
               </li>
             ))}
           </ul>

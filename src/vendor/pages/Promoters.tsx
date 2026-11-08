@@ -51,12 +51,37 @@ export function Promoters() {
       {settings.status === 'loading' && <p className={styles.centered}>Loading…</p>}
       {settings.status === 'error' && <p className={styles.alertError}>{settings.error}</p>}
       {settings.status === 'success' && (
-        <>
+        <div className={styles.columns}>
+          <div className={styles.stack}>
+            {settings.data.promotionsEnabled ? <PromoterLists settings={settings.data} readOnly={readOnly} /> : <HowItWorks />}
+          </div>
           <SettingsCard settings={settings.data} readOnly={readOnly} />
-          {settings.data.promotionsEnabled && <PromoterLists settings={settings.data} readOnly={readOnly} />}
-        </>
+        </div>
       )}
     </>
+  )
+}
+
+/** Shown in place of the lists while promotions are off. */
+function HowItWorks() {
+  return (
+    <section className={styles.card} aria-labelledby="how-promoters-work">
+      <h2 id="how-promoters-work" className={styles.cardTitle}>
+        How promoters work
+      </h2>
+      <ol className={promo.howTo}>
+        <li>
+          <strong>Set a commission</strong> and turn promotions on. You choose what share of the items a promoter earns.
+        </li>
+        <li>
+          <strong>Invite people you trust</strong>, or let promoters ask to join. Each one gets their own link to your shop.
+        </li>
+        <li>
+          <strong>They earn when a new customer orders</strong> through their link and the order is paid and delivered. Repeat orders are
+          all yours.
+        </li>
+      </ol>
+    </section>
   )
 }
 
@@ -91,9 +116,12 @@ function SettingsCard({ settings, readOnly }: { settings: PromotionSettings; rea
         Settings
       </h2>
       <fieldset className={styles.fieldset} disabled={readOnly || pending}>
-        <label className={styles.choice}>
-          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-          Let promoters share my shop
+        <label className={styles.toggleRow}>
+          <span className={styles.toggleText}>
+            Promotions
+            <span className={styles.fieldHint}>Let promoters share my shop</span>
+          </span>
+          <input className={styles.switch} type="checkbox" role="switch" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
         </label>
 
         <label className={styles.field}>
@@ -122,15 +150,17 @@ function SettingsCard({ settings, readOnly }: { settings: PromotionSettings; rea
           </p>
         )}
 
-        <label className={styles.choice}>
-          <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
-          Let new promoters ask to join
+        <label className={styles.toggleRow}>
+          <span className={styles.toggleText}>
+            Let new promoters ask to join
+            <span className={styles.fieldHint}>
+              {accept
+                ? 'Your shop is listed for promoters to find. You approve each one.'
+                : 'Your shop is hidden from new promoters. You can still invite people.'}
+            </span>
+          </span>
+          <input className={styles.switch} type="checkbox" role="switch" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
         </label>
-        <span className={styles.fieldHint}>
-          {accept
-            ? 'Your shop is listed for promoters to find. You approve each one.'
-            : 'Your shop is hidden from new promoters. You can still invite people.'}
-        </span>
       </fieldset>
 
       {!settings.shopLive && settings.promotionsEnabled && (

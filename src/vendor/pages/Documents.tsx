@@ -50,6 +50,7 @@ export function Documents() {
   return (
     <>
       <VendorPageHeader
+        back={{ to: '/vendor', label: 'Home' }}
         title="Documents"
         lead="We use these to confirm who you are before giving you a WhatsApp number. Only the MarketiX team sees them."
       />

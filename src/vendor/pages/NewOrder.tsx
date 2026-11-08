@@ -99,7 +99,7 @@ function NewOrderForm({ defaultFee }: { defaultFee: number }) {
   }
 
   return (
-    <form className={styles.card} onSubmit={handleSubmit} noValidate>
+    <form className={`${styles.card} ${styles.narrow}`} onSubmit={handleSubmit} noValidate>
       <fieldset className={styles.fieldset} disabled={pending}>
         <label className={styles.field}>
           Buyer’s phone
