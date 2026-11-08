@@ -1,18 +1,22 @@
 import QRCode from 'qrcode'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { Badge } from '@/components/Badge/Badge'
 import { useAuth } from '@/context/auth-context'
 import { useAction } from '@/hooks/useAction'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { errorMessage } from '@/lib/api'
-import { formatDateTime, whatsAppLink } from '@/lib/format'
-import { sendOrderForm } from '@/lib/orders'
+import { cedis, formatCedis, formatDateTime, whatsAppLink } from '@/lib/format'
+import { ORDER_STATUS } from '@/lib/orderDisplay'
+import { fetchMyOrders, sendOrderForm } from '@/lib/orders'
+import { fetchMyMoney, fetchMySales } from '@/lib/payouts'
 import { formatPhone } from '@/lib/phone'
 import { useAsync } from '@/hooks/useAsync'
 import { fetchShop, resubmitShop, type ShopStatus, type StepKey } from '@/lib/vendorPortal'
 import { useVendorPortal } from '../useVendorPortal'
 import styles from '../vendor.module.css'
 import home from './VendorHome.module.css'
+import { VendorPageHeader } from './VendorPageHeader'
 
 /** The checklist steps, grouped by the page where the vendor fixes them. */
 const GROUPS: { title: string; to: string; keys: StepKey[] }[] = [
@@ -30,58 +34,180 @@ export function VendorHome() {
   if (!shop) return null
 
   const approved = shop.steps.find((step) => step.key === 'approved')
+  // Progress by the rows shown: each page's group of items, then approval.
+  const groupsDone = GROUPS.filter((group) => group.keys.every((key) => shop.steps.find((step) => step.key === key)?.done ?? true)).length
+  const totalSteps = GROUPS.length + (approved ? 1 : 0)
+  const doneCount = groupsDone + (approved?.done ? 1 : 0)
+  const shopName = details.status === 'success' ? details.data.name : (shop.number?.displayName ?? '\u00a0')
 
   return (
     <>
-      <div className={styles.heading}>
-        <h1 className={styles.title}>Hi, {session?.user.firstName}</h1>
-        <p className={styles.lead}>{details.status === 'success' ? details.data.name : (shop?.number?.displayName ?? '\u00a0')}</p>
-      </div>
-
-      <StatusCard shop={shop} ownerPhone={details.status === 'success' ? details.data.ownerPhone : null} />
-
-      <section className={home.steps} aria-label="Your checklist">
-        {GROUPS.map((group, index) => {
-          const steps = group.keys.map((key) => shop.steps.find((step) => step.key === key)).filter((step) => !!step)
-          const done = steps.every((step) => step.done)
-          return (
-            <Link key={group.to} className={home.step} to={group.to}>
-              <span className={done ? home.stepDone : home.stepNumber} aria-hidden="true">
-                {done ? <CheckIcon /> : index + 1}
-              </span>
-              <div className={home.stepText}>
-                <span className={home.stepTitle}>
-                  {group.title}
-                  <span className={styles.visuallyHiddenInline}>{done ? ' (done)' : ''}</span>
-                </span>
-                <ul className={home.items}>
-                  {steps.map((step) => (
-                    <li key={step.key} className={step.done ? home.itemDone : home.item}>
-                      {step.label}
-                      <span className={styles.visuallyHiddenInline}>{step.done ? ' (done)' : ' (to do)'}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <span className={home.stepAction}>{done ? 'View' : 'Start'}</span>
+      <VendorPageHeader
+        title={`${greeting()}, ${session?.user.firstName ?? ''}`}
+        lead={shopName}
+        actions={
+          shop.status === 'ACTIVE' ? (
+            <Link className={styles.primary} to="/vendor/orders/new">
+              Add phone order
+            </Link>
+          ) : (
+            <Link className={styles.primary} to="/vendor/products/new">
+              Add product
             </Link>
           )
-        })}
-        {approved && (
-          <div className={home.stepStatic}>
-            <span className={approved.done ? home.stepDone : home.stepNumber} aria-hidden="true">
-              {approved.done ? <CheckIcon /> : GROUPS.length + 1}
-            </span>
-            <span className={home.stepText}>
-              <span className={home.stepTitle}>{approved.label}</span>
-              <span className={home.stepSummary}>
-                {approved.done ? 'Done' : 'Happens once your details, documents and a product are in.'}
+        }
+      />
+
+      <KeyFigures />
+
+      <div className={styles.columns}>
+        <div className={styles.stack}>
+          <StatusCard shop={shop} ownerPhone={details.status === 'success' ? details.data.ownerPhone : null} />
+
+          <section className={home.checklist} aria-labelledby="checklist">
+            <header className={home.checklistHead}>
+              <h2 id="checklist" className={styles.cardTitle}>
+                {approved?.done ? 'Shop setup' : 'Get your shop approved'}
+              </h2>
+              <span className={home.progressText}>
+                {doneCount} of {totalSteps} steps done
               </span>
-            </span>
-          </div>
-        )}
-      </section>
+              <span className={home.progress} aria-hidden="true">
+                <span style={{ width: `${(doneCount / totalSteps) * 100}%` }} />
+              </span>
+            </header>
+            {GROUPS.map((group, index) => {
+              const steps = group.keys.map((key) => shop.steps.find((step) => step.key === key)).filter((step) => !!step)
+              const done = steps.every((step) => step.done)
+              return (
+                <Link key={group.to} className={home.step} to={group.to}>
+                  <span className={done ? home.stepDone : home.stepNumber} aria-hidden="true">
+                    {done ? <CheckIcon /> : index + 1}
+                  </span>
+                  <div className={home.stepText}>
+                    <span className={home.stepTitle}>
+                      {group.title}
+                      <span className={styles.visuallyHiddenInline}>{done ? ' (done)' : ''}</span>
+                    </span>
+                    <ul className={home.items}>
+                      {steps.map((step) => (
+                        <li key={step.key} className={step.done ? home.itemDone : home.item}>
+                          {step.label}
+                          <span className={styles.visuallyHiddenInline}>{step.done ? ' (done)' : ' (to do)'}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <span className={done ? home.stepActionQuiet : home.stepAction}>{done ? 'View' : 'Start'}</span>
+                </Link>
+              )
+            })}
+            {approved && (
+              <div className={home.stepStatic}>
+                <span className={approved.done ? home.stepDone : home.stepNumber} aria-hidden="true">
+                  {approved.done ? <CheckIcon /> : GROUPS.length + 1}
+                </span>
+                <span className={home.stepText}>
+                  <span className={home.stepTitle}>{approved.label}</span>
+                  <span className={home.stepSummary}>{approved.done ? 'Done' : 'Happens once your details, documents and a product are in.'}</span>
+                </span>
+              </div>
+            )}
+          </section>
+        </div>
+
+        <RecentOrders />
+      </div>
     </>
+  )
+}
+
+/** "Good morning" by the vendor's clock. */
+function greeting() {
+  const hour = new Date().getHours()
+  return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+}
+
+/** This week's sales and orders, the balance and the rating, at a glance. */
+function KeyFigures() {
+  const sales = useAsync(fetchMySales, { live: true })
+  const money = useAsync(fetchMyMoney, { live: true })
+  const s = sales.status === 'success' ? sales.data : null
+  const m = money.status === 'success' ? money.data : null
+  const dash = '—'
+
+  return (
+    <section className={home.figures} aria-label="Key figures">
+      <Figure label="Sales, last 7 days" value={s ? cedis(s.thisWeek.sales) : dash} note={s ? change(s.thisWeek.sales, s.lastWeek.sales) : null} />
+      <Figure label="Orders, last 7 days" value={s ? String(s.thisWeek.orders) : dash} note={s ? `${s.lastWeek.orders} the week before` : null} />
+      <Figure label="Owed to you" value={m ? cedis(m.available) : dash} note={<Link to="/vendor/money">Withdraw to MoMo</Link>} />
+      <Figure
+        label="Buyer rating"
+        value={s?.rating.average != null ? `${s.rating.average.toFixed(1)} / 5` : dash}
+        note={s ? (s.rating.count ? `${s.rating.count} ${s.rating.count === 1 ? 'rating' : 'ratings'}` : 'No ratings yet') : null}
+      />
+    </section>
+  )
+}
+
+function Figure({ label, value, note }: { label: string; value: string; note: ReactNode }) {
+  return (
+    <div className={home.figure}>
+      <span className={home.figureLabel}>{label}</span>
+      <span className={home.figureValue}>{value}</span>
+      {note && <span className={home.figureNote}>{note}</span>}
+    </div>
+  )
+}
+
+/** "+12% on the week before", or nothing to compare with. */
+function change(now: number, before: number): string {
+  if (!before) return now ? 'First sales this fortnight' : 'No sales yet'
+  const pct = Math.round(((now - before) / before) * 100)
+  return `${pct >= 0 ? '+' : '−'}${Math.abs(pct)}% on the week before`
+}
+
+function RecentOrders() {
+  const load = useCallback(() => fetchMyOrders({ page: 1, pageSize: 6 }), [])
+  const orders = useAsync(load, { live: true })
+
+  return (
+    <section className={home.recent} aria-labelledby="recent">
+      <header className={home.recentHead}>
+        <h2 id="recent" className={styles.cardTitle}>
+          Recent orders
+        </h2>
+        <Link className={home.viewAll} to="/vendor/orders">
+          View all
+        </Link>
+      </header>
+      {orders.status === 'loading' && <p className={home.recentEmpty}>Loading…</p>}
+      {orders.status === 'error' && <p className={home.recentEmpty}>{orders.error}</p>}
+      {orders.status === 'success' &&
+        (orders.data.items.length === 0 ? (
+          <p className={home.recentEmpty}>No orders yet. They’ll show up here as buyers order on WhatsApp.</p>
+        ) : (
+          <ul className={home.recentList}>
+            {orders.data.items.map((order) => {
+              const status = ORDER_STATUS[order.status]
+              return (
+                <li key={order.id}>
+                  <Link className={home.recentRow} to={`/vendor/orders/${order.id}`}>
+                    <span className={home.recentMain}>
+                      <span className={home.recentNumber}>{order.orderNumber}</span>
+                      <span className={home.recentMeta}>{formatDateTime(order.createdAt)}</span>
+                    </span>
+                    <span className={home.recentSide}>
+                      <span className={home.recentTotal}>{formatCedis(order.totalAmount)}</span>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        ))}
+    </section>
   )
 }
 
@@ -102,8 +228,7 @@ function StatusCard({ shop, ownerPhone }: { shop: ShopStatus; ownerPhone: string
       title: 'Add your first product to get reviewed',
       body: (
         <>
-          Your shop goes to MarketiX for review as soon as it has a product in stock. Finish the checklist below too, so
-          we can approve it quickly.{' '}
+          Your shop goes to MarketiX for review as soon as it has a product in stock. Finish the checklist below too, so we can approve it quickly.{' '}
           <Link to="/vendor/products/new">Add a product</Link>
         </>
       ),
@@ -193,7 +318,7 @@ function LiveCard({ number, ownerPhone }: LiveCardProps) {
   return (
     <section className={home.statusLive} aria-labelledby="status">
       <h2 id="status" className={styles.cardTitle}>
-        🎉 Your shop is live
+        Your shop is live
       </h2>
       <p className={home.statusText}>Buyers order from you on this WhatsApp number:</p>
       <span className={home.bigNumber}>{formatPhone(number.displayNumber, 'local')}</span>

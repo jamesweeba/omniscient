@@ -1,90 +1,109 @@
-.addRow {
-  display: flex;
-  flex-direction: column;
-}
+/* Orders list */
 
-.chips {
+.tabs {
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-}
-
-.chip {
-  flex: none;
-  min-height: 36px;
+  gap: 4px;
   padding: 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  flex: none;
+  padding: 12px 8px;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text-muted);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   cursor: pointer;
 }
 
-.chipActive {
-  composes: chip;
-  color: #fff;
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+.tab:hover {
+  color: var(--color-text);
 }
 
-.orders {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.tabActive {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
-.orders[aria-busy='true'] {
-  opacity: 0.6;
+.row {
+  cursor: pointer;
 }
 
-.order {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  color: inherit;
+.right {
+  text-align: right !important;
+}
+
+.numberCell a {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-decoration: none;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
 }
 
-.order:hover {
-  border-color: var(--color-primary);
+.numberCell a:hover {
+  text-decoration: underline;
 }
 
-.orderTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.buyerCell {
+  white-space: nowrap;
 }
 
-.orderNumber {
-  font-weight: 700;
-}
-
-.orderBuyer {
-  font-size: 15px;
-}
-
-.orderItems,
-.orderMeta {
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
-.orderItems {
+.itemsCell {
+  max-width: 320px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: var(--color-text-muted);
+}
+
+.totalCell {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dateCell {
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+/* Phones: number and status on top, buyer and total, then items and date. */
+@media (max-width: 700px) {
+  .table thead {
+    display: none;
+  }
+
+  .table,
+  .table tbody {
+    display: block;
+  }
+
+  .table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-divider);
+  }
+
+  .table td {
+    padding: 0;
+    border: 0;
+  }
+
+  .numberCell { order: 1; }
+  .statusCell { order: 2; justify-self: end; }
+  .buyerCell { order: 3; }
+  .totalCell { order: 4; }
+  .itemsCell { order: 5; grid-column: 1 / -1; max-width: none; font-size: 13px; }
+  .dateCell { order: 6; grid-column: 1 / -1; font-size: 12px; }
 }
 
 /* Order detail */
@@ -98,7 +117,7 @@
 .lines {
   width: 100%;
   border-collapse: collapse;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .lines td {
@@ -142,7 +161,7 @@
 
 .facts dd {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 

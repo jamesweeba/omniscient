@@ -32,7 +32,7 @@ export function ShopDetails() {
   if (!shop) {
     return (
       <>
-        <VendorPageHeader noBack title="Create your shop" lead="Tell us about your shop. You can change most of this later." />
+        <VendorPageHeader title="Create your shop" lead="Tell us about your shop. You can change most of this later." />
         <ShopForm saved={null} status="PENDING" onCreated={() => setCreated(true)} />
       </>
     )
@@ -44,12 +44,16 @@ function ExistingShop({ status }: { status: TenantStatus }) {
   const result = useAsync(fetchShop)
   return (
     <>
-      <VendorPageHeader title="Shop details" lead="How buyers find you, how you deliver, and where we send your money." />
+      <VendorPageHeader title="Shop settings" lead="How buyers find you, how you deliver, and where we send your money." />
       <LockNotice status={status} what="your name and MoMo details" />
-      <ShopBannerCard status={status} />
-      {result.status === 'loading' && <p className={styles.centered}>Loading…</p>}
-      {result.status === 'error' && <p className={styles.alertError}>{result.error}</p>}
-      {result.status === 'success' && <ShopForm saved={result.data} status={status} />}
+      <div className={styles.columns}>
+        <div className={styles.stack}>
+          {result.status === 'loading' && <p className={styles.centered}>Loading…</p>}
+          {result.status === 'error' && <p className={styles.alertError}>{result.error}</p>}
+          {result.status === 'success' && <ShopForm saved={result.data} status={status} />}
+        </div>
+        <ShopBannerCard status={status} />
+      </div>
     </>
   )
 }
@@ -196,7 +200,7 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
   const input = (field: Field) => (errors[field] ? styles.inputInvalid : styles.input)
 
   return (
-    <form className={styles.card} onSubmit={handleSubmit} noValidate>
+    <form className={`${styles.card} ${styles.wideForm}`} onSubmit={handleSubmit} noValidate>
       <fieldset className={styles.fieldset} disabled={disabled}>
         <legend className={styles.legend}>Your shop</legend>
         <Field label="Shop name" hint="What buyers see on WhatsApp." error={errors.name}>

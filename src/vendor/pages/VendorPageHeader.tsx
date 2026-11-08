@@ -1,24 +1,28 @@
+import type { ReactNode } from 'react'
 import { BackLink } from '@/components/BackLink/BackLink'
 import { isKycLocked, isReadOnly, type TenantStatus } from '@/lib/vendorPortal'
 import styles from '../vendor.module.css'
 
 interface VendorPageHeaderProps {
-  title: string
-  lead: string
-  /** Hide the back link (e.g. on the create-shop form, before there is a dashboard). */
-  noBack?: boolean
+  title: ReactNode
+  lead?: ReactNode
+  /** A link to the page above, for pages the sidebar doesn't list (e.g. Documents, an order). */
+  back?: { to: string; label: string }
+  /** Buttons shown on the right of the title (stacked under it on phones). */
+  actions?: ReactNode
 }
 
-/** Back link and heading for a vendor sub-page. */
-export function VendorPageHeader({ title, lead, noBack }: VendorPageHeaderProps) {
+/** Title, short explanation and page actions at the top of a vendor page. */
+export function VendorPageHeader({ title, lead, back, actions }: VendorPageHeaderProps) {
   return (
     <>
-      {!noBack && (
-        <BackLink to="/vendor">My shop</BackLink>
-      )}
-      <div className={styles.heading}>
-        <h1 className={styles.title}>{title}</h1>
-        <p className={styles.lead}>{lead}</p>
+      {back && <BackLink to={back.to}>{back.label}</BackLink>}
+      <div className={styles.pageHeader}>
+        <div className={styles.heading}>
+          <h1 className={styles.title}>{title}</h1>
+          {lead && <p className={styles.lead}>{lead}</p>}
+        </div>
+        {actions && <div className={styles.pageActions}>{actions}</div>}
       </div>
     </>
   )
@@ -31,7 +35,11 @@ export function LockNotice({ status, what }: { status: TenantStatus; what: strin
   }
   if (isKycLocked(status)) {
     const why = status === 'ACTIVE' ? 'your shop is live' : 'MarketiX is reviewing your shop'
-    return <p className={styles.alertInfo}>While {why}, {what} can’t be changed. Contact MarketiX support if something is wrong.</p>
+    return (
+      <p className={styles.alertInfo}>
+        While {why}, {what} can’t be changed. Contact MarketiX support if something is wrong.
+      </p>
+    )
   }
   return null
 }

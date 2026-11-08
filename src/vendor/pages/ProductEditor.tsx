@@ -258,7 +258,7 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
 
   return (
     <>
-      <form className={styles.card} onSubmit={handleSubmit} noValidate>
+      <form className={`${styles.card} ${styles.narrow}`} onSubmit={handleSubmit} noValidate>
         <fieldset className={styles.fieldset} disabled={readOnly || pending}>
           <label className={styles.field}>
             Product name
@@ -375,9 +375,12 @@ function ProductForm({ saved, categories, readOnly }: ProductFormProps) {
             )}
           </div>
 
-          <label className={styles.choice}>
-            <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />
-            In stock — buyers can order it now
+          <label className={styles.toggleRow}>
+            <span className={styles.toggleText}>
+              In stock
+              <span className={styles.fieldHint}>{inStock ? 'Buyers can order it now.' : 'Hidden from buyers until you turn it back on.'}</span>
+            </span>
+            <input className={styles.switch} type="checkbox" role="switch" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />
           </label>
 
           <label className={styles.field}>
