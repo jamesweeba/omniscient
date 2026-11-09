@@ -55,13 +55,14 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
     <div className={styles.columns}>
       <div className={styles.stack}>
         <section className={`${styles.card} ${money.balanceCard}`} aria-label="Balance">
-          <span className={money.balanceLabel}>{owes ? 'You owe MarketiX' : 'Owed to you'}</span>
+          <span className={money.balanceLabel}>{owes ? 'You owe MarketiX' : 'MarketiX is holding for you'}</span>
           <span className={owes ? money.balanceOwed : money.balance}>{cedis(Math.abs(balance))}</span>
           <p className={styles.muted}>
             {owes
-              ? `This is our ${summary.commissionPercent}% on your cash orders. It comes off your balance as buyers confirm new orders.`
-              : `Each order is added here once the buyer confirms they got it. Withdraw it to your MoMo whenever you like, once a day.`}
+              ? `This is our ${summary.commissionPercent}% on your cash orders. It comes off what buyers pay online for your next orders.`
+              : 'Money buyers paid MarketiX online for your orders, less our share. Withdraw it to your MoMo whenever you like, once a day.'}
           </p>
+          <BalanceBreakdown summary={summary} />
           {!owes && onHold.amount > 0 && (
             <p className={styles.alertInfo}>
               {cedis(Math.max(available, 0))} can be withdrawn now. {cedis(onHold.amount)} from card payments is on hold for {onHold.days} days after the buyer
@@ -155,6 +156,58 @@ function MoneyContent({ summary }: { summary: ShopMoney }) {
           </p>
         </section>
       </div>
+    </div>
+  )
+}
+
+/**
+ * How the balance adds up, so a vendor whose buyers spent more than the balance can see why:
+ * cash orders were paid to the vendor directly, and only cost them our commission.
+ */
+function BalanceBreakdown({ summary }: { summary: ShopMoney }) {
+  const { balance, inFlight, totals, commissionPercent } = summary
+  const sent = totals.paidOut + inFlight
+  // Anything the lines below don't explain (e.g. an admin correction), so the sum always matches.
+  const other = balance - (totals.earned - totals.commissionOnCashOrders - totals.promoterCommission - sent)
+
+  return (
+    <div className={money.breakdown}>
+      <h2 className={money.breakdownTitle}>How we got this amount</h2>
+      <dl className={money.breakdownList}>
+        <dt>
+          Online orders (MoMo and card)
+          <span>What buyers paid MarketiX, less our {commissionPercent}% on the items. Delivery fees are all yours.</span>
+        </dt>
+        <dd>{cedis(totals.earned)}</dd>
+        <dt>
+          Our {commissionPercent}% on cash orders
+          <span>Buyers paid you the cash directly, so only our {commissionPercent}% comes off here.</span>
+        </dt>
+        <dd>{totals.commissionOnCashOrders > 0 ? `− ${cedis(totals.commissionOnCashOrders)}` : cedis(0)}</dd>
+        {totals.promoterCommission > 0 && (
+          <>
+            <dt>Paid to promoters</dt>
+            <dd>− {cedis(totals.promoterCommission)}</dd>
+          </>
+        )}
+        {sent > 0 && (
+          <>
+            <dt>Already sent to your MoMo</dt>
+            <dd>− {cedis(sent)}</dd>
+          </>
+        )}
+        {other !== 0 && (
+          <>
+            <dt>Other adjustments</dt>
+            <dd>{other < 0 ? `− ${cedis(-other)}` : cedis(other)}</dd>
+          </>
+        )}
+        <dt className={money.breakdownTotal}>{balance < 0 ? 'You owe MarketiX' : 'Balance'}</dt>
+        <dd className={money.breakdownTotal}>{cedis(Math.abs(balance))}</dd>
+      </dl>
+      <p className={styles.fieldHint}>
+        Not counted yet: orders the buyer hasn’t paid for, and paid orders the buyer hasn’t confirmed receiving.
+      </p>
     </div>
   )
 }
