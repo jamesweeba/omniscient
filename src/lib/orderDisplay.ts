@@ -1,5 +1,5 @@
 import { type StatusDisplay } from '@/components/Badge/Badge'
-import { formatCedis, whatsAppLink } from './format'
+import { whatsAppLink } from './format'
 import type { Fulfillment, Order, OrderPeriod, OrderStatus, PaymentMethod, PeriodQuery, ShopOrderTab } from './orders'
 import { formatPhone } from './phone'
 
@@ -71,44 +71,6 @@ export function mapLink(order: Pick<Order, 'locationLatitude' | 'locationLongitu
 /** Buyers who hide their number come through as an id such as "GH.989894404158856". */
 export const isHiddenBuyer = (phone: string) => !/^\+?\d[\d\s]*$/.test(phone)
 
-/**
- * The delivery details a vendor sends their rider on WhatsApp: buyer, where to go (with a
- * map link once the buyer has shared their pin), what to collect, and what's in the bag.
- */
-export function riderMessage(order: Order, shopName: string | null): string {
-  const phone = order.contactPhone ?? (isHiddenBuyer(order.buyerPhone) ? null : order.buyerPhone)
-  const buyer = [order.customerName, phone && formatPhone(phone, 'local')].filter(Boolean).join(', ')
-  const where = deliveryPlace(order, ', ')
-  const map = mapLink(order)
-  const items = order.items.map((item) => `• ${item.quantity} × ${item.productName}`)
-
-  const lines: (string | null)[] = [
-    `🛵 *Delivery${shopName ? ` for ${shopName}` : ''}*`,
-    `Order: *${order.orderNumber}*`,
-    '',
-    buyer ? `👤 Buyer: ${buyer}` : null,
-    where ? `📍 Area: ${where}` : null,
-    map
-      ? `🗺️ Map: ${map}${order.locationName ? ` (${order.locationName})` : ''}`
-      : '🗺️ Map: the buyer hasn’t shared their location pin yet',
-    order.deliverySlot ? `🕒 When: ${order.deliverySlot}` : null,
-    '',
-    payment(order),
-    ...(items.length ? ['', '📦 Items:', ...items] : []),
-  ]
-  return lines.filter((line) => line !== null).join('\n')
-}
-
-/** What the rider must collect. Only cash orders, or orders not paid yet, need anything. */
-function payment(order: Order): string {
-  if (order.paymentMethod === 'COD') return `💵 Collect *${formatCedis(order.totalAmount)}* in cash`
-  if (order.status === 'PENDING' || order.status === 'AWAITING_PAYMENT') {
-    return `⚠️ Not paid yet (${formatCedis(order.totalAmount)}): check with the shop before handing it over`
-  }
-  return '✅ Already paid: collect nothing'
-}
-
-/** A WhatsApp link that opens a chat with `phone`, with `text` typed in and ready to send. */
 export const whatsAppMessageLink = (phone: string, text: string) => `${whatsAppLink(phone)}?text=${encodeURIComponent(text)}`
 
 /** What the items cost, before delivery. */
