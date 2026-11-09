@@ -7,7 +7,7 @@ import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { formatCedis, formatDateTime, formatStars, whatsAppLink } from '@/lib/format'
-import { deliveryPlace, FULFILLMENT, isHiddenBuyer, mapLink, ORDER_STATUS, ORDER_STATUSES, orderSubtotal, PAYMENT_METHOD, riderMessage, riderText, whatsAppMessageLink } from '@/lib/orderDisplay'
+import { deliveryPlace, FULFILLMENT, isHiddenBuyer, mapLink, ORDER_STATUS, ORDER_STATUSES, orderSubtotal, PAYMENT_METHOD, riderText } from '@/lib/orderDisplay'
 import { deleteOrder, fetchMyOrder, updateOrderStatus, type Order, type OrderStatus, type StatusChange } from '@/lib/orders'
 import { formatPhone, parseGhanaPhone } from '@/lib/phone'
 import { isReadOnly, type TenantStatus } from '@/lib/vendorPortal'
@@ -38,7 +38,7 @@ function nextStep(order: Order): { status: OrderStatus; label: string; hint: str
     case 'PROCESSING':
       return order.fulfillment === 'PICKUP'
         ? { status: 'DELIVERED', label: 'Mark as collected', hint: 'The buyer picked it up.' }
-        : { status: 'OUT_FOR_DELIVERY', label: 'Send rider', hint: 'The buyer gets the rider’s name and phone on WhatsApp.' }
+        : { status: 'OUT_FOR_DELIVERY', label: 'Send rider', hint: 'The buyer gets the rider’s name and phone, and the rider gets the delivery details and a map, on WhatsApp.' }
     case 'OUT_FOR_DELIVERY':
       return { status: 'DELIVERED', label: 'Mark delivered', hint: 'The buyer gets a WhatsApp message.' }
     default:
@@ -63,7 +63,6 @@ export function OrderView() {
         <OrderContent
           key={result.data.id}
           initial={result.data}
-          shopName={shop.number?.displayName ?? null}
           readOnly={isReadOnly(shop.status)}
           lockStatus={shop.status}
         />
@@ -74,16 +73,11 @@ export function OrderView() {
 
 interface OrderContentProps {
   initial: Order
-  /** The shop's WhatsApp display name, for the rider message. */
-  shopName: string | null
   readOnly: boolean
   lockStatus: TenantStatus
 }
 
-/** Orders still with the rider; afterwards there's nothing to send them. */
-const RIDER_STATUSES: OrderStatus[] = ['PAID', 'CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY']
-
-function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentProps) {
+function OrderContent({ initial, readOnly, lockStatus }: OrderContentProps) {
   const navigate = useNavigate()
   const [order, setOrder] = useState(initial)
   const { pending, error, run } = useAction()
@@ -98,7 +92,6 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
   const awaitingMomo = order.status === 'AWAITING_PAYMENT' || (lockedToPaystack && order.status === 'PENDING')
   const map = mapLink(order)
   const subtotal = orderSubtotal(order)
-  const canSendRider = Boolean(order.riderPhone) && order.fulfillment !== 'PICKUP' && RIDER_STATUSES.includes(order.status)
 
   async function change(input: StatusChange) {
     setMessage(null)
@@ -110,7 +103,7 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
       setRiderForm(null)
       setMessage(
         input.status === 'OUT_FOR_DELIVERY' && order.fulfillment !== 'PICKUP'
-          ? `Marked as “${ORDER_STATUS[input.status].label}”. Now send the delivery details to your rider (under Delivery).`
+          ? `Marked as “${ORDER_STATUS[input.status].label}”. We’ve sent ${input.riderName || 'the rider'} the delivery details and the buyer’s map on WhatsApp.`
           : `Marked as “${ORDER_STATUS[input.status].label}”.`,
       )
     })
@@ -267,23 +260,6 @@ function OrderContent({ initial, shopName, readOnly, lockStatus }: OrderContentP
               Open in Maps{order.locationName ? ` · ${order.locationName}` : ''}
             </a>
           </>
-        )}
-        {canSendRider && (
-          <div className={view.riderShare}>
-            <a
-              className={styles.primary}
-              href={whatsAppMessageLink(order.riderPhone!, riderMessage(order, shopName))}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Send delivery details to {order.riderName || 'rider'} on WhatsApp
-            </a>
-            <span className={styles.fieldHint}>
-              {map
-                ? `Opens WhatsApp with the buyer’s map pin, phone and what to collect, ready to send to ${formatPhone(order.riderPhone!, 'local')}. Check the number, then tap send.`
-                : `The buyer hasn’t shared their map pin yet, so the message has their area only. Send it again once the pin arrives.`}
-            </span>
-          </div>
         )}
       </section>
 

@@ -189,12 +189,3 @@
   cursor: pointer;
 }
 
-.riderShare {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.riderShare a {
-  text-align: center;
-}
