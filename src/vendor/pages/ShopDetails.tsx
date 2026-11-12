@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router'
 import { useAction } from '@/hooks/useAction'
 import { useAsync } from '@/hooks/useAsync'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { DELIVERY_AREAS, DELIVERY_SLOTS, MARKETS, optionId } from '@/lib/locations'
+import { DELIVERY_AREA_GROUPS, DELIVERY_AREAS, DELIVERY_SLOTS, optionId } from '@/lib/locations'
 import { parseGhanaPhone } from '@/lib/phone'
 import {
   createShop,
@@ -58,7 +58,6 @@ function ExistingShop({ status }: { status: TenantStatus }) {
   )
 }
 
-const OTHER_MARKET = '__other'
 /** The API refuses higher fees (MarketiX takes its commission on items only). */
 const MAX_DELIVERY_FEE = 50
 const MAX_TITLE = 30
@@ -86,13 +85,11 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
   const savedAreas = saved?.deliveryAreas?.map((a) => a.title) ?? []
   // The API adds an "as soon as possible" slot itself; it isn't one the vendor picks.
   const savedSlots = saved?.deliverySlots?.filter((s) => s.id !== 'asap') ?? []
-  const knownMarket = !saved?.market || MARKETS.includes(saved.market)
 
   const [name, setName] = useState(saved?.name ?? '')
   const [ownerFullName, setOwnerFullName] = useState(saved?.ownerFullName ?? '')
   const [ownerPhone, setOwnerPhone] = useState(saved?.ownerPhone ?? '')
-  const [market, setMarket] = useState(saved?.market ? (knownMarket ? saved.market : OTHER_MARKET) : '')
-  const [otherMarket, setOtherMarket] = useState(knownMarket ? '' : (saved?.market ?? ''))
+  const [market, setMarket] = useState(saved?.market ?? '')
   const [stallLocation, setStallLocation] = useState(saved?.stallLocation ?? '')
   const [description, setDescription] = useState(saved?.description ?? '')
   const [fee, setFee] = useState(String(saved?.deliveryFee ?? 10))
@@ -113,13 +110,13 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
     const next: Errors = {}
     const phone = phoneForApi(ownerPhone)
     const momo = momoNumber.trim() ? phoneForApi(momoNumber) : ''
-    const marketName = market === OTHER_MARKET ? otherMarket.trim() : market
+    const marketName = market.trim()
     const deliveryFee = Number(fee)
 
     if (!name.trim()) next.name = 'Enter your shop name.'
     if (!ownerFullName.trim()) next.ownerFullName = 'Enter your full name as it is on your Ghana Card.'
     if (!phone) next.ownerPhone = 'Enter a Ghana phone number, e.g. 0244111222.'
-    if (!marketName) next.market = 'Choose your market.'
+    if (!marketName) next.market = 'Enter your market.'
     if (fee.trim() === '' || !Number.isFinite(deliveryFee) || deliveryFee < 0 || deliveryFee > MAX_DELIVERY_FEE) {
       next.fee = `Enter an amount from 0 to ${MAX_DELIVERY_FEE}.`
     }
@@ -206,24 +203,14 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
         <Field label="Shop name" hint="What buyers see on WhatsApp." error={errors.name}>
           <input className={input('name')} placeholder="Ama Groceries" value={name} onChange={(e) => edit('name', setName)(e.target.value)} />
         </Field>
-        <Field label="Market" error={errors.market}>
-          <select className={styles.select} value={market} onChange={(e) => edit('market', setMarket)(e.target.value)}>
-            <option value="" disabled>
-              Choose your market
-            </option>
-            {MARKETS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-            <option value={OTHER_MARKET}>Somewhere else</option>
-          </select>
+        <Field label="Market" hint="The market or town you sell from." error={errors.market}>
+          <input
+            className={input('market')}
+            placeholder="e.g. Kejetia, Kumasi"
+            value={market}
+            onChange={(e) => edit('market', setMarket)(e.target.value)}
+          />
         </Field>
-        {market === OTHER_MARKET && (
-          <Field label="Which market or town?" error={errors.market}>
-            <input className={input('market')} placeholder="e.g. Atonsu, Kumasi" value={otherMarket} onChange={(e) => edit('market', setOtherMarket)(e.target.value)} />
-          </Field>
-        )}
         <Field label="Stall location" hint="Where riders find you inside the market." optional>
           <input className={styles.input} placeholder="Row C, stall 14" value={stallLocation} onChange={(e) => setStallLocation(e.target.value)} />
         </Field>
@@ -258,11 +245,15 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
         <Field label="Delivery fee (GH₵)" error={errors.fee}>
           <input className={input('fee')} type="number" inputMode="decimal" min={0} max={MAX_DELIVERY_FEE} value={fee} onChange={(e) => edit('fee', setFee)(e.target.value)} />
         </Field>
-        <ChoiceGroup label="Areas you deliver to">
-          {areaOptions.map((area) => (
-            <Choice key={area} label={area} checked={areas.includes(area)} onChange={() => setAreas(toggle(areas, area))} />
+        {[...DELIVERY_AREA_GROUPS, { city: 'Other', areas: areaOptions.filter((area) => !DELIVERY_AREAS.includes(area)) }]
+          .filter((group) => group.areas.length > 0)
+          .map((group) => (
+            <ChoiceGroup key={group.city} label={`Areas you deliver to · ${group.city}`}>
+              {group.areas.map((area) => (
+                <Choice key={area} label={area} checked={areas.includes(area)} onChange={() => setAreas(toggle(areas, area))} />
+              ))}
+            </ChoiceGroup>
           ))}
-        </ChoiceGroup>
         <Field label="Another area" error={errors.newArea} optional>
           <span className={styles.inline}>
             <input
@@ -303,7 +294,7 @@ function ShopForm({ saved, status, onCreated }: ShopFormProps) {
         <Field label="MoMo number" error={errors.momoNumber}>
           <input className={input('momoNumber')} type="tel" inputMode="tel" placeholder="0244111222" value={momoNumber} onChange={(e) => edit('momoNumber', setMomoNumber)(e.target.value)} />
         </Field>
-        <Field label="Name the MoMo number is registered to" error={errors.momoName}>
+        <Field label="MoMo account name" hint="The name this number is registered to." error={errors.momoName}>
           <input className={input('momoName')} placeholder="Ama Serwaa Mensah" value={momoName} onChange={(e) => edit('momoName', setMomoName)(e.target.value)} />
         </Field>
       </fieldset>
